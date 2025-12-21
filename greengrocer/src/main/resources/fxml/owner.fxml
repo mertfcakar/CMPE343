@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="com.group12.greengrocer.controllers.OwnerController"
+            prefWidth="960" prefHeight="540" style="-fx-background-color: #f5f5f5;">
+    
+    <!-- TOP: Header -->
+    <top>
+        <VBox style="-fx-background-color: #6a1b9a; -fx-padding: 15;">
+            <HBox alignment="CENTER_LEFT" spacing="20">
+                <Label text="Group12 GreenGrocer - Owner Dashboard" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="usernameLabel" text="Owner" style="-fx-text-fill: white; -fx-font-size: 16px;"/>
+                <Button text="Logout" onAction="#handleLogout" style="-fx-background-color: #c62828; -fx-text-fill: white;"/>
+            </HBox>
+        </VBox>
+    </top>
+    
+    <!-- CENTER: Main content with TabPane -->
+    <center>
+        <BorderPane>
+            
+            <!-- Tab Navigation -->
+            <center>
+                <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE" style="-fx-background-color: white;">
+                    
+                    <!-- Dashboard Tab -->
+                    <Tab text="Dashboard">
+                        <ScrollPane fitToWidth="true" fitToHeight="true">
+                            <VBox spacing="20" style="-fx-padding: 20;">
+                                
+                                <!-- Statistics Cards -->
+                                <HBox spacing="15">
+                                    <VBox spacing="5" style="-fx-background-color: #e3f2fd; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
+                                        <Label text="Total Products" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                                        <Label fx:id="totalProductsLabel" text="30" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1976d2;"/>
+                                    </VBox>
+                                    <VBox spacing="5" style="-fx-background-color: #e8f5e9; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
+                                        <Label text="Active Orders" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                                        <Label fx:id="activeOrdersLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #388e3c;"/>
+                                    </VBox>
+                                    <VBox spacing="5" style="-fx-background-color: #fff3e0; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
+                                        <Label text="Total Revenue" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                                        <Label fx:id="totalRevenueLabel" text="TL 0.00" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #f57c00;"/>
+                                    </VBox>
+                                    <VBox spacing="5" style="-fx-background-color: #fce4ec; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
+                                        <Label text="Active Carriers" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                                        <Label fx:id="activeCarriersLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #c2185b;"/>
+                                    </VBox>
+                                </HBox>
+                                
+                                <!-- Recent Activity -->
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                    <Label text="Recent Orders" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                    <Separator/>
+                                    <TableView fx:id="recentOrdersTable" prefHeight="200">
+                                        <columns>
+                                            <TableColumn text="Order ID" prefWidth="80"/>
+                                            <TableColumn text="Customer" prefWidth="150"/>
+                                            <TableColumn text="Total" prefWidth="100"/>
+                                            <TableColumn text="Status" prefWidth="120"/>
+                                            <TableColumn text="Date" prefWidth="150"/>
+                                        </columns>
+                                    </TableView>
+                                </VBox>
+                                
+                            </VBox>
+                        </ScrollPane>
+                    </Tab>
+                    
+                    <!-- Products Management Tab -->
+                    <Tab text="Products">
+                        <BorderPane>
+                            <top>
+                                <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 15; -fx-background-color: #f5f5f5;">
+                                    <Button text="Add Product" onAction="#handleAddProduct" style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                                    <Button text="Edit Product" onAction="#handleUpdateProduct"/>
+                                    <Button text="Remove Product" onAction="#handleRemoveProduct" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <TextField fx:id="productSearchField" promptText="Search products..." prefWidth="200"/>
+                                    <Button text="Search" onAction="#handleSearchProducts"/>
+                                </HBox>
+                            </top>
+                            <center>
+                                <TableView fx:id="productsTable">
+                                    <columns>
+                                        <TableColumn text="ID" prefWidth="50"/>
+                                        <TableColumn text="Name" prefWidth="150"/>
+                                        <TableColumn text="Type" prefWidth="100"/>
+                                        <TableColumn text="Price" prefWidth="80"/>
+                                        <TableColumn text="Stock" prefWidth="80"/>
+                                        <TableColumn text="Threshold" prefWidth="80"/>
+                                        <TableColumn text="Current Price" prefWidth="100"/>
+                                        <TableColumn text="Status" prefWidth="100"/>
+                                    </columns>
+                                </TableView>
+                            </center>
+                        </BorderPane>
+                    </Tab>
+                    
+                    <!-- Orders Management Tab -->
+                    <Tab text="Orders">
+                        <BorderPane>
+                            <top>
+                                <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 15; -fx-background-color: #f5f5f5;">
+                                    <Label text="Filter by Status:" style="-fx-font-weight: bold;"/>
+                                    <ComboBox fx:id="orderStatusFilter" promptText="All Orders" prefWidth="150"/>
+                                    <Button text="Refresh" onAction="#handleRefreshOrders"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="ordersCountLabel" text="Total: 0 orders" style="-fx-font-size: 12px;"/>
+                                </HBox>
+                            </top>
+                            <center>
+                                <TableView fx:id="ordersTable">
+                                    <columns>
+                                        <TableColumn text="Order ID" prefWidth="80"/>
+                                        <TableColumn text="Customer" prefWidth="120"/>
+                                        <TableColumn text="Carrier" prefWidth="120"/>
+                                        <TableColumn text="Items" prefWidth="150"/>
+                                        <TableColumn text="Total" prefWidth="100"/>
+                                        <TableColumn text="Status" prefWidth="100"/>
+                                        <TableColumn text="Order Date" prefWidth="130"/>
+                                        <TableColumn text="Delivery Date" prefWidth="130"/>
+                                    </columns>
+                                </TableView>
+                            </center>
+                        </BorderPane>
+                    </Tab>
+                    
+                    <!-- Carriers Management Tab -->
+                    <Tab text="Carriers">
+                        <BorderPane>
+                            <top>
+                                <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 15; -fx-background-color: #f5f5f5;">
+                                    <Button text="Hire Carrier" onAction="#handleHireCarrier" style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                                    <Button text="Fire Carrier" onAction="#handleFireCarrier" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Button text="View Ratings" onAction="#handleViewCarrierRatings"/>
+                                </HBox>
+                            </top>
+                            <center>
+                                <TableView fx:id="carriersTable">
+                                    <columns>
+                                        <TableColumn text="ID" prefWidth="50"/>
+                                        <TableColumn text="Username" prefWidth="150"/>
+                                        <TableColumn text="Contact" prefWidth="200"/>
+                                        <TableColumn text="Completed Deliveries" prefWidth="150"/>
+                                        <TableColumn text="Current Deliveries" prefWidth="150"/>
+                                        <TableColumn text="Avg Rating" prefWidth="100"/>
+                                        <TableColumn text="Status" prefWidth="100"/>
+                                    </columns>
+                                </TableView>
+                            </center>
+                        </BorderPane>
+                    </Tab>
+                    
+                    <!-- Messages Tab -->
+                    <Tab text="Messages">
+                        <BorderPane>
+                            <left>
+                                <VBox spacing="10" style="-fx-padding: 15; -fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;" prefWidth="250">
+                                    <Label text="Customer Messages" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                                    <Separator/>
+                                    <ListView fx:id="messagesListView" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Refresh" onAction="#handleRefreshMessages" maxWidth="Infinity"/>
+                                </VBox>
+                            </left>
+                            <center>
+                                <VBox spacing="10" style="-fx-padding: 15;">
+                                    <Label text="Message Details" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                    <Separator/>
+                                    <GridPane hgap="10" vgap="10">
+                                        <Label text="From:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+                                        <Label fx:id="messageFromLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                        <Label text="Subject:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+                                        <Label fx:id="messageSubjectLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                        <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+                                        <Label fx:id="messageDateLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                    </GridPane>
+                                    <Separator/>
+                                    <TextArea fx:id="messageContentArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
+                                    <HBox spacing="10">
+                                        <Button text="Reply" onAction="#handleReplyMessage" style="-fx-background-color: #2196f3; -fx-text-fill: white;"/>
+                                        <Button text="Delete" onAction="#handleDeleteMessage"/>
+                                    </HBox>
+                                </VBox>
+                            </center>
+                        </BorderPane>
+                    </Tab>
+                    
+                    <!-- Settings Tab -->
+                    <Tab text="Settings">
+                        <ScrollPane fitToWidth="true" fitToHeight="true">
+                            <VBox spacing="20" style="-fx-padding: 20;">
+                                
+                                <!-- Coupons Section -->
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
+                                        <Label text="Discount Coupons" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Button text="Add Coupon" onAction="#handleAddCoupon" style="-fx-background-color: #4caf50; -fx-text-fill: white;"/>
+                                    </HBox>
+                                    <Separator/>
+                                    <TableView fx:id="couponsTable" prefHeight="200">
+                                        <columns>
+                                            <TableColumn text="Code" prefWidth="150"/>
+                                            <TableColumn text="Discount Percent" prefWidth="120"/>
+                                            <TableColumn text="Min Purchase" prefWidth="120"/>
+                                            <TableColumn text="Valid Until" prefWidth="150"/>
+                                            <TableColumn text="Status" prefWidth="100"/>
+                                        </columns>
+                                    </TableView>
+                                </VBox>
+                                
+                                <!-- Loyalty Program Section -->
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                    <Label text="Loyalty Program Settings" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                    <Separator/>
+                                    <GridPane hgap="15" vgap="10">
+                                        <Label text="Minimum Orders Required:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                        <TextField fx:id="minOrdersField" promptText="5" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                        <Label text="Discount Percentage:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                        <TextField fx:id="loyaltyDiscountField" promptText="5.0" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                        <Label text="percent" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                    </GridPane>
+                                    <Button text="Save Loyalty Settings" onAction="#handleSaveLoyaltySettings" 
+                                            style="-fx-background-color: #2196f3; -fx-text-fill: white;" maxWidth="200"/>
+                                </VBox>
+                                
+                                <!-- System Settings Section -->
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                    <Label text="System Settings" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                    <Separator/>
+                                    <GridPane hgap="15" vgap="10">
+                                        <Label text="Minimum Cart Value:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                        <TextField fx:id="minCartValueField" promptText="50.00" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                        <Label text="TL" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                        <Label text="VAT Rate:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                        <TextField fx:id="vatRateField" text="18" prefWidth="100" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                        <Label text="percent" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                    </GridPane>
+                                </VBox>
+                                
+                            </VBox>
+                        </ScrollPane>
+                    </Tab>
+                    
+                    <!-- Reports Tab -->
+                    <Tab text="Reports">
+                        <VBox spacing="15" style="-fx-padding: 20;">
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Report Type:" style="-fx-font-weight: bold;"/>
+                                <ComboBox fx:id="reportTypeCombo" promptText="Select Report Type" prefWidth="200"/>
+                                <Button text="Generate Report" onAction="#handleGenerateReport" style="-fx-background-color: #4caf50; -fx-text-fill: white;"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button text="Export to PDF" onAction="#handleExportReport"/>
+                            </HBox>
+                            <Separator/>
+                            <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
+                                <VBox fx:id="reportContentBox" spacing="15" style="-fx-padding: 10;">
+                                    <Label text="Select a report type and click Generate Report" 
+                                           style="-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 50;"/>
+                                </VBox>
+                            </ScrollPane>
+                        </VBox>
+                    </Tab>
+                    
+                </TabPane>
+            </center>
+            
+        </BorderPane>
+    </center>
+    
+    <!-- BOTTOM: Status bar -->
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: #e0e0e0; -fx-padding: 10;">
+            <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px;"/>
+        </HBox>
+    </bottom>
+    
+</BorderPane>

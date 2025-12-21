@@ -8,11 +8,12 @@ import java.sql.SQLException;
  * Handles database connections
  */
 public class DatabaseConnection {
-    
+
     private static Connection connection = null;
-    
+
     /**
      * Get database connection
+     * 
      * @return Connection object
      */
     public static Connection getConnection() {
@@ -20,18 +21,17 @@ public class DatabaseConnection {
             if (connection == null || connection.isClosed()) {
                 // Load MySQL JDBC Driver
                 Class.forName(DatabaseConfig.JDBC_DRIVER);
-                
+
                 // Create connection
                 connection = DriverManager.getConnection(
-                    DatabaseConfig.DB_URL,
-                    DatabaseConfig.DB_USER,
-                    DatabaseConfig.DB_PASSWORD
-                );
-                
+                        DatabaseConfig.DB_URL,
+                        DatabaseConfig.DB_USER,
+                        DatabaseConfig.DB_PASSWORD);
+
                 System.out.println("Database connection established successfully!");
             }
             return connection;
-            
+
         } catch (ClassNotFoundException e) {
             System.err.println("MySQL JDBC Driver not found!");
             e.printStackTrace();
@@ -42,7 +42,7 @@ public class DatabaseConnection {
             return null;
         }
     }
-    
+
     /**
      * Close database connection
      */
@@ -57,9 +57,10 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Test database connection
+     * 
      * @return true if connection successful
      */
     public static boolean testConnection() {

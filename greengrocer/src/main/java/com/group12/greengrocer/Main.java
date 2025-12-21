@@ -16,9 +16,9 @@ public class Main extends Application {
     public void start(Stage primaryStage) throws Exception {
         // Load the login FXML
         Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
-        
+
         Scene scene = new Scene(root, 960, 540);
-        
+
         primaryStage.setTitle("Group12 GreenGrocer - Login");
         primaryStage.setScene(scene);
         primaryStage.centerOnScreen();

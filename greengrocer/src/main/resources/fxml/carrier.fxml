@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="com.group12.greengrocer.controllers.CarrierController"
+            prefWidth="960" prefHeight="540" style="-fx-background-color: #f5f5f5;">
+    
+    <!-- TOP: Header -->
+    <top>
+        <VBox style="-fx-background-color: #1976d2; -fx-padding: 15;">
+            <HBox alignment="CENTER_LEFT" spacing="20">
+                <Label text="Group12 GreenGrocer - Carrier Portal" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="usernameLabel" text="Carrier" style="-fx-text-fill: white; -fx-font-size: 16px;"/>
+                <Button text="Logout" onAction="#handleLogout" style="-fx-background-color: #c62828; -fx-text-fill: white;"/>
+            </HBox>
+        </VBox>
+    </top>
+    
+    <!-- CENTER: Three sections for deliveries -->
+    <center>
+        <HBox spacing="10" style="-fx-padding: 15;">
+            
+            <!-- LEFT: Available Deliveries -->
+            <VBox spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="📦 AVAILABLE DELIVERIES" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="Refresh" onAction="#handleRefreshAvailable" style="-fx-font-size: 10px;"/>
+                </HBox>
+                <Separator/>
+                
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="availableDeliveriesBox" spacing="10" style="-fx-padding: 5;">
+                        <!-- Available deliveries will be added dynamically -->
+                    </VBox>
+                </ScrollPane>
+                
+                <Button text="Accept Selected" onAction="#handleSelectDelivery" maxWidth="Infinity"
+                        style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            </VBox>
+            
+            <!-- CENTER: Current/Selected Deliveries -->
+            <VBox spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="🚚 MY CURRENT DELIVERIES" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="Refresh" onAction="#handleRefreshCurrent" style="-fx-font-size: 10px;"/>
+                </HBox>
+                <Separator/>
+                
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="currentDeliveriesBox" spacing="10" style="-fx-padding: 5;">
+                        <!-- Current deliveries will be added dynamically -->
+                    </VBox>
+                </ScrollPane>
+                
+                <Button text="Mark as Delivered" onAction="#handleCompleteDelivery" maxWidth="Infinity"
+                        style="-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            </VBox>
+            
+            <!-- RIGHT: Completed Deliveries -->
+            <VBox spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="✅ COMPLETED DELIVERIES" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="View Ratings" onAction="#handleViewRatings" style="-fx-font-size: 10px;"/>
+                </HBox>
+                <Separator/>
+                
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="completedDeliveriesBox" spacing="10" style="-fx-padding: 5;">
+                        <!-- Completed deliveries will be added dynamically -->
+                    </VBox>
+                </ScrollPane>
+            </VBox>
+            
+        </HBox>
+    </center>
+    
+    <!-- BOTTOM: Status bar -->
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: #e0e0e0; -fx-padding: 10;">
+            <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="statsLabel" text="Current: 0 | Completed: 0 | Rating: N/A" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+        </HBox>
+    </bottom>
+    
+</BorderPane>

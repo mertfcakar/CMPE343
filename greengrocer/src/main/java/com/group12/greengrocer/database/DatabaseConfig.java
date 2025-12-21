@@ -8,7 +8,7 @@ public class DatabaseConfig {
     public static final String DB_URL = "jdbc:mysql://localhost:3306/greengrocer";
     public static final String DB_USER = "myuser";
     public static final String DB_PASSWORD = "1234";
-    
+
     // JDBC Driver
     public static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
 }

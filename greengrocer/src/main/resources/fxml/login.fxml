@@ -5,35 +5,37 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.group12.greengrocer.controllers.LoginController">
+<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.group12.greengrocer.controllers.LoginController">
     <padding>
-        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
+        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
     </padding>
 
     <Label text="Group12 GreenGrocer">
         <font>
-            <Font name="System Bold" size="28.0"/>
+            <Font name="System Bold" size="28.0" />
         </font>
     </Label>
 
     <Label text="Login to your account">
         <font>
-            <Font size="14.0"/>
+            <Font size="14.0" />
         </font>
     </Label>
 
     <VBox spacing="10.0" maxWidth="300.0">
-        <Label text="Username:"/>
-        <TextField fx:id="usernameField" promptText="Enter username"/>
+        <Label text="Username:" />
+        <TextField fx:id="usernameField" promptText="Enter username" />
 
-        <Label text="Password:"/>
-        <PasswordField fx:id="passwordField" promptText="Enter password"/>
+        <Label text="Password:" />
+        <PasswordField fx:id="passwordField" promptText="Enter password" />
     </VBox>
 
-    <Label fx:id="messageLabel" textFill="RED"/>
+    <Label fx:id="messageLabel" textFill="RED" />
 
     <HBox alignment="CENTER" spacing="10.0">
-        <Button text="Login" onAction="#handleLogin" prefWidth="100.0"/>
-        <Button text="Register" onAction="#handleRegister" prefWidth="100.0"/>
+        <Button text="Login" onAction="#handleLogin" prefWidth="100.0" />
+        <Button text="Register" onAction="#handleRegister" prefWidth="100.0" />
     </HBox>
 </VBox>
