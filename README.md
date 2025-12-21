@@ -12,6 +12,20 @@ This application provides a complete e-commerce solution for a local greengrocer
 
 ---
 
+## 🚀 Getting Started
+
+### 1. First-Time Setup
+Run this once to download dependencies and build the project:
+- **Windows:** `.\mvnw.cmd clean install`
+- **Mac/Linux:** `chmod +x mvnw && ./mvnw clean install`
+
+### 2. Regular Run
+Run this command to launch the application:
+- **Windows:** `.\mvnw.cmd javafx:run`
+- **Mac/Linux:** `./mvnw javafx:run`
+
+---
+
 ## 🎯 Features by Role
 
 ### 👤 Customer Interface

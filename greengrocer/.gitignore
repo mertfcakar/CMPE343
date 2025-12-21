@@ -1,17 +1,26 @@
-# Compiled files
 target/
 *.class
 *.jar
 *.war
 *.ear
 
-# IDE specific files
 .vscode/
+.history/
+bin/
+
 .idea/
 *.iml
-.DS_Store
+.settings/
+.project
+.classpath
 
-# Maven
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -19,14 +28,10 @@ pom.xml.next
 release.properties
 dependency-reduced-pom.xml
 
-# Logs
 *.log
-
-# JavaDoc (will be generated before submission)
-docs/
-
-# Test files
 *.tmp
+*.swp
+*~
 
-# Database credentials (if separate config file)
-db.properties
+docs/
+target/site/apidocs/
