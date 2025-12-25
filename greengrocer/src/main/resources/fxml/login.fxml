@@ -1,41 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1"
-    fx:controller="com.group12.greengrocer.controllers.LoginController">
+<VBox alignment="CENTER" spacing="15.0" style="-fx-background-color: #ffffff;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.group12.greengrocer.controllers.LoginController">
     <padding>
-        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
+        <Insets bottom="40.0" left="50.0" right="50.0" top="40.0" />
     </padding>
 
-    <Label text="Group12 GreenGrocer">
+    <Label text="GreenGrocer" textFill="#2e7d32">
         <font>
-            <Font name="System Bold" size="28.0" />
+            <Font name="System Bold" size="36.0" />
         </font>
     </Label>
 
-    <Label text="Login to your account">
-        <font>
-            <Font size="14.0" />
-        </font>
-    </Label>
+    <VBox maxWidth="320.0" spacing="10.0">
+        <Label style="-fx-font-weight: bold;" text="Username" />
+        <TextField fx:id="usernameField" prefHeight="35.0" promptText="Enter your username" />
 
-    <VBox spacing="10.0" maxWidth="300.0">
-        <Label text="Username:" />
-        <TextField fx:id="usernameField" promptText="Enter username" />
-
-        <Label text="Password:" />
-        <PasswordField fx:id="passwordField" promptText="Enter password" />
+        <Label style="-fx-font-weight: bold;" text="Password" />
+        <StackPane>
+            <PasswordField fx:id="passwordField" prefHeight="35.0" promptText="Enter your password" />
+            <TextField fx:id="passwordTextField" managed="false" prefHeight="35.0" promptText="Enter your password" visible="false" />
+        </StackPane>
+        
+        <CheckBox fx:id="showPasswordCheck" onAction="#handlePasswordVisibility" text="Show Password" />
     </VBox>
 
-    <Label fx:id="messageLabel" textFill="RED" />
+    <Label fx:id="messageLabel" textAlignment="CENTER" wrapText="true">
+        <font>
+            <Font size="13.0" />
+        </font>
+    </Label>
 
-    <HBox alignment="CENTER" spacing="10.0">
-        <Button text="Login" onAction="#handleLogin" prefWidth="100.0" />
-        <Button text="Register" onAction="#handleRegister" prefWidth="100.0" />
-    </HBox>
+    <VBox alignment="CENTER" maxWidth="320.0" spacing="12.0">
+        <Button fx:id="loginButton" onAction="#handleLogin" prefHeight="40.0" prefWidth="320.0" style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="Login" />
+        
+        <HBox alignment="CENTER" spacing="15.0">
+            <Hyperlink onAction="#handleForgotPassword" text="Forgot ID?" textFill="#7f8c8d" />
+            <Hyperlink onAction="#handleChangePassword" text="Change Password" textFill="#2980b9" style="-fx-font-weight: bold;" />
+        </HBox>
+    </VBox>
 </VBox>
