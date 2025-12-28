@@ -4,20 +4,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.group12.greengrocer.models.Order;
 
-/**
- * Data Access Object for Order operations
- */
 public class OrderDAO {
 
-    // --- SENİN KODUNLA UYUMLU KURYE PANELİ METODLARI ---
-
     /**
-     * Dashboard verilerini getirir (Hüseyin'in Kurye Paneli için)
+     * Kurye Paneli için Dashboard Verilerini Getirir
      */
     public static List<Order> getCarrierDashboardOrders(int carrierId, String neighborhood) {
         List<Order> orders = new ArrayList<>();
@@ -36,25 +34,49 @@ public class OrderDAO {
         if (!isAllRegions) {
             sql.append(" AND o.delivery_neighborhood = ? ");
         }
+        
         sql.append(" ORDER BY o.priority_level DESC, o.order_time ASC");
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            
             ps.setInt(1, carrierId);
             ps.setInt(2, carrierId);
             if (!isAllRegions) ps.setString(3, neighborhood);
 
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                orders.add(mapResultSetToOrder(rs));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    orders.add(mapResultSetToOrder(rs));
+                }
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return orders;
     }
 
     /**
-     * Siparişi üstüne al: pending -> assigned
+     * Siparişin ürünlerini metin olarak getirir
      */
+    public static List<String> getOrderItemsAsText(int orderId) {
+        List<String> items = new ArrayList<>();
+        String sql = "SELECT product_name, quantity FROM order_items WHERE order_id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String name = rs.getString("product_name");
+                    double qty = rs.getDouble("quantity");
+                    items.add(String.format("- %.2f kg %s", qty, name));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return items;
+    }
+
     public static boolean assignAndPickUp(int orderId, int carrierId) {
         String sql = "UPDATE orders SET carrier_id = ?, status = 'assigned' WHERE id = ? AND status = 'pending'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -65,9 +87,6 @@ public class OrderDAO {
         } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
-    /**
-     * Siparişi havuza geri bırak: assigned -> pending
-     */
     public static boolean releaseOrderToPool(int orderId, int carrierId) {
         String sql = "UPDATE orders SET carrier_id = NULL, status = 'pending' WHERE id = ? AND carrier_id = ? AND status = 'assigned'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -78,11 +97,25 @@ public class OrderDAO {
         } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
+    public static boolean completeOrder(int orderId, int carrierId, java.time.LocalDateTime deliveryDateTime) {
+        Timestamp timestamp = Timestamp.valueOf(deliveryDateTime);
+        String sql = "UPDATE orders SET status = 'completed', delivery_time = ? WHERE id = ? AND carrier_id = ? AND status = 'assigned'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, timestamp);
+            ps.setInt(2, orderId);
+            ps.setInt(3, carrierId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
     /**
-     * Siparişi tamamla: assigned -> completed
+     * [YENİ]: Tamamlanmış siparişi geri al (Undo)
+     * Status: completed -> assigned
+     * Delivery Time: NULL yapılır
      */
-    public static boolean completeOrder(int orderId, int carrierId) {
-        String sql = "UPDATE orders SET status = 'completed', delivery_time = CURRENT_TIMESTAMP WHERE id = ? AND carrier_id = ? AND status = 'assigned'";
+    public static boolean undoCompleteOrder(int orderId, int carrierId) {
+        String sql = "UPDATE orders SET status = 'assigned', delivery_time = NULL WHERE id = ? AND carrier_id = ? AND status = 'completed'";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);
@@ -90,45 +123,6 @@ public class OrderDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); return false; }
     }
-
-    // --- ARKADAŞININ TASLAKLARI (ŞİMDİLİK TODO OLARAK KALANLAR) ---
-
-    public static int createOrder(Order order) {
-        // TODO: Implement
-        return 0;
-    }
-
-    public static List<Order> getOrdersByCustomer(int userId) {
-        // TODO: Implement
-        return new ArrayList<>();
-    }
-
-    public static List<Order> getAvailableOrders() {
-        // Hüseyin: Bu metot yukarıdaki getCarrierDashboardOrders ile benzer işi yapıyor.
-        return new ArrayList<>();
-    }
-
-    public static List<Order> getOrdersByCarrier(int carrierId) {
-        // TODO: Implement
-        return new ArrayList<>();
-    }
-
-    public static List<Order> getAllOrders() {
-        // TODO: Implement
-        return new ArrayList<>();
-    }
-
-    public static boolean cancelOrder(int orderId) {
-        // TODO: Implement
-        return false;
-    }
-
-    public static boolean updateOrderStatus(int orderId, String status) {
-        // TODO: Implement
-        return false;
-    }
-
-    // --- YARDIMCI METOT (ResultSet -> Model Dönüşümü) ---
 
     private static Order mapResultSetToOrder(ResultSet rs) throws SQLException {
         Order order = new Order();

@@ -100,4 +100,24 @@ public class UserDAO {
         }
         return false;
     }
+
+    public static boolean registerCustomer(String username, String password, String address, String neighborhood, String contact) {
+        String sql = "INSERT INTO users (username, password, role, address, neighborhood, contact_details) VALUES (?, ?, 'customer', ?, ?, ?)";
+        
+        try (java.sql.Connection conn = DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, username);
+            ps.setString(2, password);
+            ps.setString(3, address);
+            ps.setString(4, neighborhood);
+            ps.setString(5, contact);
+            
+            return ps.executeUpdate() > 0;
+            
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

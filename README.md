@@ -14,6 +14,14 @@ This application provides a complete e-commerce solution for a local greengrocer
 
 ## 🚀 Getting Started
 
+### 0. Database Import (Required First)
+Before running the application, you must import the database:
+
+1. Open **MySQL Workbench**.
+2. Go to **Server** > **Data Import**.
+3. Select **Import from Self-Contained File** and choose `database/Group12.sql`.
+4. Click **Start Import**.
+
 ### 1. First-Time Setup
 Run this once to download dependencies and build the project:
 - **Windows:** `.\mvnw.cmd clean install`
