@@ -45,17 +45,14 @@
     </Label>
 
     <VBox alignment="CENTER" maxWidth="320.0" spacing="10.0">
-        <!-- LOGIN BUTONU -->
         <Button fx:id="loginButton" onAction="#handleLogin" prefHeight="40.0" prefWidth="320.0" 
                 style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" 
                 text="Login" />
         
-        <!-- REGISTER BUTONU (ZORUNLU) -->
         <Button onAction="#handleRegister" prefHeight="35.0" prefWidth="320.0" 
                 style="-fx-background-color: white; -fx-text-fill: #2e7d32; -fx-border-color: #2e7d32; -fx-border-width: 2; -fx-font-weight: bold; -fx-cursor: hand;" 
                 text="Register as New Customer" />
         
-        <!-- SECURITY WIZARD (BONUS PUAN İÇİN KALSIN) -->
         <Hyperlink onAction="#handleChangePassword" text="Security Wizard / Reset Password" textFill="#7f8c8d" />
     </VBox>
 </VBox>

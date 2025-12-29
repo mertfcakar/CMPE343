@@ -1,136 +1,216 @@
 package com.group12.greengrocer.controllers;
 
+import com.group12.greengrocer.database.MessageDAO;
+import com.group12.greengrocer.database.OrderDAO;
 import com.group12.greengrocer.database.ProductDAO;
+import com.group12.greengrocer.database.UserDAO;
+import com.group12.greengrocer.models.Order;
 import com.group12.greengrocer.models.Product;
 import com.group12.greengrocer.models.User;
-import com.group12.greengrocer.utils.ShoppingCart; // YENİ EKLENDİ
+import com.group12.greengrocer.utils.ShoppingCart;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Spinner;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.geometry.Pos;
+import javafx.scene.layout.GridPane;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CustomerController {
     
     private User currentUser;
+    private List<Product> allProducts;
     
     @FXML private Label usernameLabel;
-    @FXML private Label cartItemsLabel; // FXML'de sol menüdeki label (varsa)
-    @FXML private GridPane vegetablesGrid;
-    @FXML private GridPane fruitsGrid;
+    @FXML private Label cartItemsLabel;
+    
+    // YENİ: GridPane yerine FlowPane (Otomatik satır atlama için)
+    @FXML private FlowPane vegetablesFlowPane;
+    @FXML private FlowPane fruitsFlowPane;
+    
+    @FXML private TextField searchField;
     
     public void initData(User user) {
         this.currentUser = user;
-        usernameLabel.setText("Welcome, " + user.getUsername());
+        usernameLabel.setText("Hello, " + user.getUsername());
         
-        // [HATA 1 ÇÖZÜMÜ]: currentUser'ı Sepet yöneticisine gönderiyoruz
+        // Sepeti başlat
         ShoppingCart.getInstance().setCurrentUser(user);
         
         loadProducts();
         updateCartLabel();
     }
     
-    // ... initialize methodu aynı kalabilir ...
-
     private void loadProducts() {
-        List<Product> products = ProductDAO.getAllProducts();
-        
-        int vegCol = 0, vegRow = 0;
-        int fruitCol = 0, fruitRow = 0;
+        allProducts = ProductDAO.getAllProducts();
+        displayProducts(allProducts);
+    }
+
+    private void displayProducts(List<Product> products) {
+        if (vegetablesFlowPane != null) vegetablesFlowPane.getChildren().clear();
+        if (fruitsFlowPane != null) fruitsFlowPane.getChildren().clear();
 
         for (Product p : products) {
             VBox productCard = createProductCard(p);
 
             if ("vegetable".equalsIgnoreCase(p.getType())) {
-                vegetablesGrid.add(productCard, vegCol, vegRow);
-                vegCol++;
-                if (vegCol == 3) { vegCol = 0; vegRow++; }
+                if (vegetablesFlowPane != null) vegetablesFlowPane.getChildren().add(productCard);
             } else if ("fruit".equalsIgnoreCase(p.getType())) {
-                fruitsGrid.add(productCard, fruitCol, fruitRow);
-                fruitCol++;
-                if (fruitCol == 3) { fruitCol = 0; fruitRow++; }
+                if (fruitsFlowPane != null) fruitsFlowPane.getChildren().add(productCard);
             }
         }
     }
 
+    // --- PROFESYONEL ÜRÜN KARTI TASARIMI ---
     private VBox createProductCard(Product p) {
         VBox card = new VBox(10);
-        card.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0); -fx-background-radius: 10;");
-        card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(180);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #eceff1; -fx-border-width: 1;");
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(15));
+        card.setPrefWidth(200);
+        card.setPrefHeight(280);
+        
+        // Hafif gölge efekti
+        DropShadow shadow = new DropShadow();
+        shadow.setColor(Color.rgb(0, 0, 0, 0.1));
+        shadow.setRadius(5);
+        shadow.setOffsetY(3);
+        card.setEffect(shadow);
 
-        // Resim
+        // Resim Alanı
         ImageView imgView = new ImageView();
-        imgView.setFitHeight(100); imgView.setFitWidth(120); imgView.setPreserveRatio(true);
+        imgView.setFitHeight(120); 
+        imgView.setFitWidth(160); 
+        imgView.setPreserveRatio(true);
 
         if (p.getImage() != null && p.getImage().length > 0) {
             try { imgView.setImage(new Image(new ByteArrayInputStream(p.getImage()))); } catch (Exception e) {}
         } else {
-            imgView.setStyle("-fx-background-color: #eee;"); 
+            // Placeholder (Boşsa gri kutu)
+             imgView.setImage(null); 
+        }
+        
+        // Stok Durumu Etiketi (Resmin üzerine gelebilir ama basitlik için alta koyuyoruz)
+        Label stockLabel = new Label();
+        if (p.getStock() <= 0) {
+            stockLabel.setText("OUT OF STOCK");
+            stockLabel.setStyle("-fx-text-fill: white; -fx-background-color: #c62828; -fx-padding: 3 8; -fx-background-radius: 3; -fx-font-size: 10px;");
+        } else if (p.getStock() <= p.getThreshold()) {
+            stockLabel.setText("LOW STOCK");
+            stockLabel.setStyle("-fx-text-fill: white; -fx-background-color: #f57c00; -fx-padding: 3 8; -fx-background-radius: 3; -fx-font-size: 10px;");
+        } else {
+            stockLabel.setText("IN STOCK");
+            stockLabel.setStyle("-fx-text-fill: white; -fx-background-color: #4caf50; -fx-padding: 3 8; -fx-background-radius: 3; -fx-font-size: 10px;");
         }
 
-        // İsim ve Fiyat
+        // İsim
         Label nameLbl = new Label(p.getName());
-        nameLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        nameLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #37474f;");
+        nameLbl.setWrapText(true);
         
+        // Fiyat
         double displayPrice = p.getCurrentPrice(); 
         Label priceLbl = new Label(String.format("%.2f TL / kg", displayPrice));
-        if (p.getStock() <= p.getThreshold()) {
-             priceLbl.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-             priceLbl.setText(priceLbl.getText() + " (LOW STOCK!)");
-        } else {
-             priceLbl.setStyle("-fx-text-fill: green;");
+        priceLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+        
+        if (p.getStock() <= p.getThreshold() && p.getStock() > 0) {
+             priceLbl.setText(priceLbl.getText() + " (x2)");
+             priceLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #d32f2f; -fx-font-weight: bold;");
         }
 
-        // Miktar
+        // Miktar Seçimi ve Buton
+        HBox actionBox = new HBox(5);
+        actionBox.setAlignment(Pos.CENTER);
+        
         Spinner<Double> amountSpinner = new Spinner<>(0.5, 20.0, 1.0, 0.5);
         amountSpinner.setEditable(true);
-        amountSpinner.setPrefWidth(100);
+        amountSpinner.setPrefWidth(70);
+        amountSpinner.setStyle("-fx-font-size: 12px;");
 
-        // Ekle Butonu
-        Button addBtn = new Button("Add to Cart");
-        addBtn.setStyle("-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-cursor: hand;");
+        Button addBtn = new Button("Add");
+        addBtn.setStyle("-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 5;");
+        addBtn.setPrefWidth(60);
         
-        // [HATA 2 ÇÖZÜMÜ]: TODO silindi, gerçek kod eklendi
+        if (p.getStock() <= 0) {
+            addBtn.setDisable(true);
+            amountSpinner.setDisable(true);
+        }
+        
         addBtn.setOnAction(e -> {
             double qty = amountSpinner.getValue();
-            
-            // Stok Kontrolü
             if (qty > p.getStock()) {
-                showAlert("Stock Error", "Not enough stock! Available: " + p.getStock() + " kg");
+                showAlert("Stock Warning", "Only " + p.getStock() + " kg available.");
                 return;
             }
-
-            // Sepete Ekle
             ShoppingCart.getInstance().addItem(p, qty);
-            
-            // Kullanıcıya bilgi ver
             updateCartLabel();
-            showAlert("Success", p.getName() + " (" + qty + " kg) added to cart.");
+            // Basit bir geri bildirim animasyonu (Buton rengi değişir)
+            addBtn.setStyle("-fx-background-color: #1b5e20; -fx-text-fill: white;");
+            addBtn.setText("OK");
+            new java.util.Timer().schedule(new java.util.TimerTask() {
+                @Override public void run() {
+                    javafx.application.Platform.runLater(() -> {
+                        addBtn.setText("Add");
+                        addBtn.setStyle("-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;");
+                    });
+                }
+            }, 1000);
         });
 
-        card.getChildren().addAll(imgView, nameLbl, priceLbl, amountSpinner, addBtn);
+        actionBox.getChildren().addAll(amountSpinner, addBtn);
+
+        // Kart yapısı
+        VBox topBox = new VBox(5, stockLabel, imgView, nameLbl, priceLbl);
+        topBox.setAlignment(Pos.TOP_CENTER);
+        VBox.setVgrow(topBox, Priority.ALWAYS); // Yukarıyı doldur
+
+        card.getChildren().addAll(topBox, new Separator(), actionBox);
         return card;
     }
 
     private void updateCartLabel() {
         if (cartItemsLabel != null) {
             int count = ShoppingCart.getInstance().getItemCount();
-            cartItemsLabel.setText("Cart: " + count + " items");
+            cartItemsLabel.setText(count + " items");
         }
+    }
+
+    @FXML
+    private void handleSearch() {
+        String query = searchField.getText().toLowerCase();
+        if (query.isEmpty()) {
+            displayProducts(allProducts);
+        } else {
+            List<Product> filtered = allProducts.stream()
+                .filter(p -> p.getName().toLowerCase().contains(query))
+                .collect(Collectors.toList());
+            displayProducts(filtered);
+        }
+    }
+
+    @FXML
+    private void handleClearSearch() {
+        searchField.clear();
+        displayProducts(allProducts);
     }
 
     @FXML
@@ -138,27 +218,141 @@ public class CustomerController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/shopping_cart.fxml"));
             Parent root = loader.load();
-            
             Stage stage = new Stage();
-            stage.setTitle("Shopping Cart");
+            stage.setTitle("Shopping Cart - " + currentUser.getUsername());
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            stage.setOnHidden(e -> updateCartLabel());
+        } catch (Exception e) { e.printStackTrace(); }
     }
+
+    // --- POPUP PENCERELER (DIALOGS) ---
+
+    @FXML 
+    private void handleViewOrders() {
+        Stage stage = new Stage();
+        stage.setTitle("My Orders");
+        stage.initModality(Modality.APPLICATION_MODAL);
+
+        TableView<Order> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        
+        TableColumn<Order, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+        
+        TableColumn<Order, String> dateCol = new TableColumn<>("Date");
+        dateCol.setCellValueFactory(new PropertyValueFactory<>("orderTime"));
+        
+        TableColumn<Order, Double> totalCol = new TableColumn<>("Total");
+        totalCol.setCellValueFactory(new PropertyValueFactory<>("totalCost"));
+        
+        TableColumn<Order, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+        
+        TableColumn<Order, String> itemsCol = new TableColumn<>("Details");
+        itemsCol.setCellValueFactory(cell -> {
+            List<String> items = OrderDAO.getOrderItemsAsText(cell.getValue().getId());
+            return new SimpleStringProperty(items.toString());
+        });
+
+        table.getColumns().addAll(idCol, dateCol, totalCol, statusCol, itemsCol);
+        table.setItems(FXCollections.observableArrayList(OrderDAO.getOrdersByUserId(currentUser.getId())));
+
+        VBox layout = new VBox(10, table);
+        layout.setPadding(new Insets(10));
+        stage.setScene(new Scene(layout, 700, 400));
+        stage.show();
+    }
+
+    @FXML 
+    private void handleSendMessage() {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Contact Support");
+        dialog.setHeaderText("Send message to Owner");
+
+        ButtonType sendBtn = new ButtonType("Send", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(sendBtn, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField subjectField = new TextField(); subjectField.setPromptText("Subject");
+        TextArea messageArea = new TextArea(); messageArea.setPromptText("Type your message...");
+
+        grid.add(new Label("Subject:"), 0, 0); grid.add(subjectField, 1, 0);
+        grid.add(new Label("Message:"), 0, 1); grid.add(messageArea, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == sendBtn) {
+                int ownerId = UserDAO.getOwnerId();
+                if(ownerId == 0) return false;
+                return MessageDAO.sendMessage(currentUser.getId(), ownerId, subjectField.getText(), messageArea.getText());
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(success -> {
+            if(success) showAlert("Success", "Message sent.");
+            else showAlert("Error", "Failed to send message.");
+        });
+    }
+
+    @FXML 
+    private void handleEditProfile() {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Edit Profile");
+        dialog.setHeaderText("Update Info");
+
+        ButtonType saveBtn = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField addrField = new TextField(currentUser.getAddress());
+        TextField contactField = new TextField(currentUser.getContactDetails());
+        PasswordField passField = new PasswordField(); passField.setPromptText("New Password (Optional)");
+
+        grid.add(new Label("Address:"), 0, 0); grid.add(addrField, 1, 0);
+        grid.add(new Label("Contact:"), 0, 1); grid.add(contactField, 1, 1);
+        grid.add(new Label("Password:"), 0, 2); grid.add(passField, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == saveBtn) {
+                String pass = passField.getText().isEmpty() ? currentUser.getPassword() : passField.getText();
+                boolean success = UserDAO.updateUserProfile(currentUser.getId(), addrField.getText(), contactField.getText(), pass);
+                if(success) {
+                    currentUser.setAddress(addrField.getText());
+                    currentUser.setContactDetails(contactField.getText());
+                    currentUser.setPassword(pass);
+                }
+                return success;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(success -> {
+            if(success) showAlert("Success", "Profile updated.");
+            else showAlert("Error", "Update failed.");
+        });
+    }
+    
+    @FXML private void handleViewDeliveries() { handleViewOrders(); }
+    @FXML private void handleBrowseProducts() { /* Already Home */ }
 
     @FXML
     private void handleLogout() {
         try {
-            Stage currentStage = (Stage) usernameLabel.getScene().getWindow();
-            currentStage.close();
+            ((Stage) usernameLabel.getScene().getWindow()).close();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
             Parent root = loader.load();
-            Stage loginStage = new Stage();
-            loginStage.setScene(new Scene(root));
-            loginStage.show();
-        } catch (Exception e) { e.printStackTrace(); }
+            new Stage().setScene(new Scene(root));
+            ((Stage)root.getScene().getWindow()).show();
+        } catch (Exception e) {}
     }
 
     private void showAlert(String title, String content) {
@@ -168,13 +362,4 @@ public class CustomerController {
         alert.setContentText(content);
         alert.showAndWait();
     }
-
-    // Diğer boş metodlar...
-    @FXML private void handleBrowseProducts() {}
-    @FXML private void handleViewOrders() {}
-    @FXML private void handleViewDeliveries() {}
-    @FXML private void handleSendMessage() {}
-    @FXML private void handleEditProfile() {}
-    @FXML private void handleSearch() {}
-    @FXML private void handleClearSearch() {}
 }

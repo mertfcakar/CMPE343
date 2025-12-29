@@ -30,7 +30,7 @@ CREATE TABLE `carrier_ratings` (
   `carrier_id` int NOT NULL,
   `customer_id` int NOT NULL,
   `rating` int NOT NULL,
-  `comment` text COLLATE utf8mb4_unicode_ci,
+  `comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   PRIMARY KEY (`id`),
   KEY `order_id` (`order_id`),
   CONSTRAINT `carrier_ratings_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ DROP TABLE IF EXISTS `coupons`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `coupons` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `discount_percentage` decimal(5,2) NOT NULL,
   `min_purchase_amount` decimal(10,2) DEFAULT '0.00',
   `max_discount_amount` decimal(10,2) DEFAULT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE `loyalty_settings` (
   `id` int NOT NULL AUTO_INCREMENT,
   `min_orders` int DEFAULT '5',
   `discount_percentage` decimal(5,2) DEFAULT '5.00',
-  `description` text COLLATE utf8mb4_unicode_ci,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `is_active` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -114,15 +114,15 @@ CREATE TABLE `messages` (
   `id` int NOT NULL AUTO_INCREMENT,
   `sender_id` int NOT NULL,
   `receiver_id` int DEFAULT NULL,
-  `subject` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_read` tinyint(1) DEFAULT '0',
   `reply_to` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `sender_id` (`sender_id`),
   CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,6 +131,7 @@ CREATE TABLE `messages` (
 
 LOCK TABLES `messages` WRITE;
 /*!40000 ALTER TABLE `messages` DISABLE KEYS */;
+INSERT INTO `messages` VALUES (1,4,3,'Sipariş Gecikmesi','Merhaba, 1 numaralı siparişim hala gelmedi.',0,NULL,'2025-12-28 22:02:03'),(5,4,3,'Sipariş Gecikmesi','Merhaba, 1 numaralı siparişim hala gelmedi.',0,NULL,'2025-12-28 22:03:41'),(6,10,3,'Teşekkürler','Ürünler çok taze geldi, teşekkür ederim.',0,NULL,'2025-12-28 22:03:41'),(7,11,3,'Stok Sorusu','Avokado ne zaman stoğa girer?',1,NULL,'2025-12-28 22:03:41'),(8,12,3,'Yanlış Ürün','Domates yerine Elma gelmiş, değişim talep ediyorum.',0,NULL,'2025-12-28 22:03:41'),(9,1,3,'dfgdsg','fdsdgdfsdg',0,NULL,'2025-12-28 22:25:00');
 /*!40000 ALTER TABLE `messages` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -154,7 +155,7 @@ CREATE TABLE `order_items` (
   KEY `product_id` (`product_id`),
   CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
   CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -163,7 +164,7 @@ CREATE TABLE `order_items` (
 
 LOCK TABLES `order_items` WRITE;
 /*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
-INSERT INTO `order_items` VALUES (1,1,1,'Domates',2.00,25.00,50.00),(2,1,13,'Elma',4.00,25.00,100.00),(3,2,3,'Biber',2.00,30.00,60.00),(4,2,2,'Salatalık',1.00,20.00,20.00),(5,3,5,'Patates',3.00,15.00,45.00);
+INSERT INTO `order_items` VALUES (1,1,1,'Domates',2.00,25.00,50.00),(2,1,13,'Elma',4.00,25.00,100.00),(3,2,3,'Biber',2.00,30.00,60.00),(4,2,2,'Salatalık',1.00,20.00,20.00),(5,3,5,'Patates',3.00,15.00,45.00),(6,4,13,'Elma',5.00,25.00,125.00),(7,4,1,'Domates',5.00,25.00,125.00),(8,5,5,'Patates',4.00,15.00,60.00),(9,5,7,'Havuç',3.00,18.00,54.00),(10,6,6,'Soğan',3.75,12.00,45.00),(11,7,1,'Domates',1.00,25.00,25.00),(12,7,2,'Salatalık',1.00,20.00,20.00);
 /*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -191,13 +192,14 @@ CREATE TABLE `orders` (
   `priority_level` int DEFAULT '1',
   `invoice` longtext,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `payment_method` enum('CASH_ON_DELIVERY','ONLINE_PAYMENT') DEFAULT 'CASH_ON_DELIVERY',
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   KEY `carrier_id` (`carrier_id`),
   KEY `idx_status` (`status`),
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`carrier_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -206,7 +208,7 @@ CREATE TABLE `orders` (
 
 LOCK TABLES `orders` WRITE;
 /*!40000 ALTER TABLE `orders` DISABLE KEYS */;
-INSERT INTO `orders` VALUES (1,4,NULL,'2025-12-28 16:21:46',NULL,'2025-12-29 16:21:46','Teşvikiye Cad. No:10','Şişli',177.00,150.00,27.00,0.00,'pending',3,NULL,'2025-12-28 16:21:46'),(2,4,2,'2025-12-28 16:21:46',NULL,'2025-12-28 16:21:46','Valikonağı Cad. No:5','Şişli',94.40,80.00,14.40,0.00,'assigned',2,NULL,'2025-12-28 16:21:46'),(3,4,2,'2025-12-28 16:21:46','2025-12-28 16:21:46','2025-12-27 16:21:46','Abdi İpekçi Cad.','Şişli',53.10,45.00,8.10,0.00,'completed',1,NULL,'2025-12-28 16:21:46');
+INSERT INTO `orders` VALUES (1,4,NULL,'2025-12-28 16:21:46',NULL,'2025-12-29 16:21:46','Teşvikiye Cad. No:10','Şişli',177.00,150.00,27.00,0.00,'pending',3,NULL,'2025-12-28 16:21:46','CASH_ON_DELIVERY'),(2,4,NULL,'2025-12-28 16:21:46',NULL,'2025-12-28 16:21:46','Valikonağı Cad. No:5','Şişli',94.40,80.00,14.40,0.00,'pending',2,NULL,'2025-12-28 16:21:46','ONLINE_PAYMENT'),(3,4,2,'2025-12-28 16:21:46','2025-12-28 16:21:46','2025-12-27 16:21:46','Abdi İpekçi Cad.','Şişli',53.10,45.00,8.10,0.00,'completed',1,NULL,'2025-12-28 16:21:46','CASH_ON_DELIVERY'),(4,10,2,'2025-12-23 22:03:41','2025-12-24 22:03:41','2025-12-28 22:03:41','Bağdat Cad. No:10','Kadıköy',250.00,211.86,38.14,0.00,'completed',1,NULL,'2025-12-28 22:03:41','ONLINE_PAYMENT'),(5,11,NULL,'2025-12-28 20:03:41',NULL,'2025-12-28 22:03:41','Nispetiye Cad. No:5','Beşiktaş',120.50,102.12,18.38,0.00,'assigned',1,NULL,'2025-12-28 22:03:41','CASH_ON_DELIVERY'),(6,12,NULL,'2025-12-28 22:03:41',NULL,'2025-12-29 22:03:41','Halaskargazi Cad.','Şişli',45.00,38.14,6.86,0.00,'pending',1,NULL,'2025-12-28 22:03:41','ONLINE_PAYMENT'),(7,1,NULL,'2025-12-28 22:31:31',NULL,'2025-12-30 06:00:00','Vişnezade Mah. Şair Nedim Cad. No:12','Beşiktaş',53.10,45.00,8.10,0.00,'pending',1,NULL,'2025-12-28 22:31:31','CASH_ON_DELIVERY');
 /*!40000 ALTER TABLE `orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -290,7 +292,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -299,7 +301,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'cust','cust','customer','Vişnezade Mah. Şair Nedim Cad. No:12','Beşiktaş','musteri@email.com','2025-12-28 16:21:46'),(2,'carr','carr','carrier','Merkez Mah. Abide-i Hürriyet Cad.','Şişli','kurye@email.com','2025-12-28 16:21:46'),(3,'own','own','owner','Caferağa Mah. Moda Cad.','Kadıköy','patron@email.com','2025-12-28 16:21:46'),(4,'ahmet','1234','customer','Teşvikiye Mah. Valikonağı Cad.','Şişli','ahmet@email.com','2025-12-28 16:21:46'),(5,'ayse','1234','customer','Rasimpaşa Mah. Rıhtım Cad.','Kadıköy','ayse@email.com','2025-12-28 16:21:46'),(6,'mehmet','1234','carrier','Sinanpaşa Mah. Ihlamurdere Cad.','Beşiktaş','mehmet@email.com','2025-12-28 16:21:46');
+INSERT INTO `users` VALUES (1,'cust','cust','customer','Vişnezade Mah. Şair Nedim Cad. No:12','Beşiktaş','musteri@email.com','2025-12-28 16:21:46'),(2,'carr','carr','carrier','Merkez Mah. Abide-i Hürriyet Cad.','Şişli','kurye@email.com','2025-12-28 16:21:46'),(3,'own','own','owner','Caferağa Mah. Moda Cad.','Kadıköy','patron@email.com','2025-12-28 16:21:46'),(4,'ahmet','1234','customer','Teşvikiye Mah. Valikonağı Cad.','Şişli','ahmet@email.com','2025-12-28 16:21:46'),(5,'ayse','1234','customer','Rasimpaşa Mah. Rıhtım Cad.','Kadıköy','ayse@email.com','2025-12-28 16:21:46'),(10,'zeynep','1234','customer','Bağdat Cad. No:10','Kadıköy','zeynep@email.com','2025-12-28 22:03:41'),(11,'burak','1234','customer','Nispetiye Cad. No:5','Beşiktaş','burak@email.com','2025-12-28 22:03:41'),(12,'selin','1234','customer','Halaskargazi Cad.','Şişli','selin@email.com','2025-12-28 22:03:41'),(13,'asdf','1234','carrier',NULL,NULL,'','2025-12-29 10:57:19'),(14,'1234','123','customer','adsf','Beşiktaş','1234','2025-12-29 11:15:50');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -353,4 +355,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-28 19:22:52
+-- Dump completed on 2025-12-29 17:34:28

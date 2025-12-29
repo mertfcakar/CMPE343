@@ -4,47 +4,52 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Updated Order model to support Carrier Features:
- * - Neighborhood filtering
- * - JOIN data (Customer Name, Address)
- * - Priority system for UI coloring
- */
 public class Order {
 
     private int id;
     private int userId;
 
-    // ✅ UI & JOIN Fields (Veritabanında JOIN ile çekip buraya dolduracağız)
-    private String customerName;       // TableView'da "Müşteri" sütunu için
-    private String deliveryNeighborhood; // Filtreleme ve Tablo için
-    private String deliveryAddress;      // Kuryenin gideceği tam adres
-    private int priorityLevel;           // 1: Normal, 2: High, 3: Urgent (Renk için)
+    // Carrier UI Fields
+    private String customerName;       
+    private String deliveryNeighborhood; 
+    private String deliveryAddress;      
+    private int priorityLevel;           
 
-    // ✅ Carrier related
     private Integer carrierId; 
     private Timestamp orderTime; 
     private Timestamp deliveryTime; 
     private Timestamp requestedDeliveryDate; 
 
-    // ✅ Cost-related
     private double subtotal;
     private double vatAmount;
     private double discountAmount;
     private double totalCost;
 
-    // ✅ Status (Suggested: "PENDING", "ASSIGNED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED")
     private String status;
     private String invoice; 
     private List<OrderItem> items;
+    
+    // --- YENİ EKLENEN ALAN ---
+    private String paymentMethod; // "CASH_ON_DELIVERY" veya "ONLINE_PAYMENT"
 
     public Order() {
         this.items = new ArrayList<>();
-        this.status = "PENDING"; // Varsayılanı PENDING yaptık
-        this.priorityLevel = 1;  // Varsayılan normal öncelik
+        this.status = "PENDING"; 
+        this.priorityLevel = 1;  
     }
 
-    // ---------- NEW Getters / Setters for Carrier Features ----------
+    // --- Kurye Kazancı Hesaplama Mantığı ---
+    // Formül: Sabit 25 TL + Sipariş Tutarının %5'i
+    public double getCarrierEarnings() {
+        double baseFee = 25.00; 
+        double commission = totalCost * 0.05;
+        return baseFee + commission;
+    }
+
+    // --- Getters / Setters ---
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
@@ -57,8 +62,6 @@ public class Order {
 
     public int getPriorityLevel() { return priorityLevel; }
     public void setPriorityLevel(int priorityLevel) { this.priorityLevel = priorityLevel; }
-
-    // ---------- Existing Getters / Setters ----------
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -101,39 +104,6 @@ public class Order {
     public List<OrderItem> getItems() { return items; }
     public void setItems(List<OrderItem> items) {
         this.items = (items == null) ? new ArrayList<>() : items;
-    }
-
-    // ---------- Carrier Flow Helpers (Existing logic preserved) ----------
-
-    public void assignCarrier(int carrierId) {
-        if (isFinalState()) throw new IllegalStateException("Order in final state.");
-        this.carrierId = carrierId;
-        if (status == null || "PENDING".equalsIgnoreCase(status)) {
-            this.status = "ASSIGNED";
-        }
-    }
-
-    public void markOutForDelivery(int carrierId) {
-        ensureCarrierOwnership(carrierId);
-        if (isFinalState()) throw new IllegalStateException("Cannot change status.");
-        this.status = "OUT_FOR_DELIVERY";
-    }
-
-    public void markDelivered(int carrierId) {
-        ensureCarrierOwnership(carrierId);
-        if ("CANCELLED".equalsIgnoreCase(status)) throw new IllegalStateException("Order is cancelled.");
-        this.status = "DELIVERED";
-        this.deliveryTime = new Timestamp(System.currentTimeMillis());
-    }
-
-    private boolean isFinalState() {
-        return "DELIVERED".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status);
-    }
-
-    private void ensureCarrierOwnership(int carrierId) {
-        if (this.carrierId == null || this.carrierId != carrierId) {
-            throw new IllegalStateException("Invalid carrier ownership.");
-        }
     }
 
     @Override

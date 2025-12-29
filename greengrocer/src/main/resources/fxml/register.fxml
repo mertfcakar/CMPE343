@@ -1,38 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="10.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
-      fx:controller="com.group12.greengrocer.controllers.RegisterController"
-      style="-fx-background-color: white; -fx-padding: 30;">
+<VBox alignment="CENTER" spacing="12.0" style="-fx-background-color: white; -fx-padding: 25;" 
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.group12.greengrocer.controllers.RegisterController">
 
+    <!-- Başlık -->
     <Label text="New Customer Registration" textFill="#2e7d32">
-        <font><Font name="System Bold" size="20.0" /></font>
+        <font>
+            <Font name="System Bold" size="22.0" />
+        </font>
     </Label>
 
-    <GridPane hgap="10" vgap="10">
-        <Label text="Username:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
-        <TextField fx:id="usernameField" promptText="Unique username" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+    <VBox spacing="5.0" maxWidth="350">
+        <!-- Kullanıcı Adı -->
+        <Label style="-fx-font-weight: bold;" text="Username:" />
+        <TextField fx:id="usernameField" promptText="Choose a unique username" style="-fx-background-radius: 5;" />
 
-        <Label text="Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
-        <PasswordField fx:id="passwordField" promptText="Strong password" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+        <!-- ŞİFRE ALANI (StackPane ile Gizli/Açık Şifre Üst Üste) -->
+        <Label style="-fx-font-weight: bold;" text="Password:" />
+        <HBox spacing="5" alignment="CENTER_LEFT">
+            <StackPane HBox.hgrow="ALWAYS">
+                <!-- Görünür Şifre -->
+                <TextField fx:id="visiblePasswordField" promptText="Create a password" 
+                           visible="false" managed="false" style="-fx-background-radius: 5;"/>
+                <!-- Gizli Şifre -->
+                <PasswordField fx:id="hiddenPasswordField" promptText="Create a password" 
+                               style="-fx-background-radius: 5;"/>
+            </StackPane>
+            
+            <!-- Butonlar -->
+            <Button onAction="#handleSuggestPassword" text="Generate" 
+                    style="-fx-font-size: 10px; -fx-background-color: #2196f3; -fx-text-fill: white; -fx-cursor: hand;"/>
+            <Button onAction="#handleCopyPassword" text="Copy" 
+                    style="-fx-font-size: 10px; -fx-background-color: #ff9800; -fx-text-fill: white; -fx-cursor: hand;"/>
+        </HBox>
+        
+        <!-- Şifreyi Göster Checkbox -->
+        <CheckBox fx:id="showPasswordCheck" text="Show Password" 
+                  style="-fx-font-size: 11px; -fx-text-fill: #555;" onAction="#handleTogglePassword"/>
 
-        <Label text="Address:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
-        <TextField fx:id="addressField" promptText="Full address" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+        <!-- Şifre Gücü Göstergesi -->
+        <Label fx:id="strengthLabel" text="" textFill="RED" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
 
-        <Label text="Neighborhood:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
-        <ComboBox fx:id="neighborhoodCombo" promptText="Select Region" prefWidth="200" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+        <!-- Adres -->
+        <Label style="-fx-font-weight: bold;" text="Full Address:" />
+        <TextField fx:id="addressField" promptText="Street, Apt, No..." style="-fx-background-radius: 5;" />
 
-        <Label text="Contact:" GridPane.rowIndex="4" GridPane.columnIndex="0" />
-        <TextField fx:id="contactField" promptText="Phone or Email" GridPane.rowIndex="4" GridPane.columnIndex="1" />
-    </GridPane>
+        <!-- Semt -->
+        <Label style="-fx-font-weight: bold;" text="Neighborhood:" />
+        <ComboBox fx:id="neighborhoodCombo" maxWidth="Infinity" promptText="Select Region" style="-fx-background-radius: 5;" />
 
-    <Label fx:id="errorLabel" textFill="red" />
+        <!-- İletişim -->
+        <Label style="-fx-font-weight: bold;" text="Contact Info:" />
+        <TextField fx:id="contactField" promptText="Phone or Email" style="-fx-background-radius: 5;" />
+    </VBox>
 
-    <Button text="Register Now" onAction="#handleRegister" 
-            style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" 
-            prefWidth="200" />
+    <!-- Hata Mesajı -->
+    <Label fx:id="errorLabel" textFill="#d32f2f" wrapText="true" maxWidth="350" textAlignment="CENTER"/>
+
+    <!-- Kayıt Butonu -->
+    <Button onAction="#handleRegister" text="Register Now" 
+            style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;" 
+            prefWidth="200.0" prefHeight="40.0" />
+
 </VBox>
