@@ -34,24 +34,39 @@ import javafx.stage.Stage;
 
 public class CarrierController {
 
-    @FXML private VBox availableDeliveriesBox, currentDeliveriesBox, completedDeliveriesBox;
-    @FXML private ComboBox<String> neighborhoodCombo, completedFilterCombo;
-    @FXML private TextField searchField;
-    @FXML private Label lblActiveOrders, lblTotalEarnings, lblAvgSpeed, lblUsername, lblCarrierRegion;
-    @FXML private Button undoButton;
-    @FXML private Label notificationLabel;
+    @FXML
+    private VBox availableDeliveriesBox, currentDeliveriesBox, completedDeliveriesBox;
+    @FXML
+    private ComboBox<String> neighborhoodCombo, completedFilterCombo;
+    @FXML
+    private TextField searchField;
+    @FXML
+    private Label lblActiveOrders, lblTotalEarnings, lblAvgSpeed, lblUsername, lblCarrierRegion;
+    @FXML
+    private Button undoButton;
+    @FXML
+    private Label notificationLabel;
 
     private User currentUser;
     private List<Order> allOrders;
-    
+
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private Stack<ActionRecord> historyStack = new Stack<>();
-    private enum ActionType { PICKUP, RELEASE, COMPLETE }
+
+    private enum ActionType {
+        PICKUP, RELEASE, COMPLETE
+    }
+
     private class ActionRecord {
-        ActionType type; int orderId; String description;
+        ActionType type;
+        int orderId;
+        String description;
+
         public ActionRecord(ActionType type, int orderId, String description) {
-            this.type = type; this.orderId = orderId; this.description = description;
+            this.type = type;
+            this.orderId = orderId;
+            this.description = description;
         }
     }
 
@@ -62,13 +77,12 @@ public class CarrierController {
     public void initData(User user) {
         this.currentUser = user;
         lblUsername.setText("👤 " + user.getUsername());
-        
+
         String myNeighborhood = user.getNeighborhood();
         lblCarrierRegion.setText("Bölge: " + (myNeighborhood != null ? myNeighborhood : "Atanmamış"));
 
         neighborhoodCombo.setItems(javafx.collections.FXCollections.observableArrayList(
-            "Tüm İstanbul", "Beşiktaş", "Kadıköy", "Şişli", "Üsküdar", "Fatih", "Maltepe"
-        ));
+                "Tüm İstanbul", "Beşiktaş", "Kadıköy", "Şişli", "Üsküdar", "Fatih", "Maltepe"));
 
         if (myNeighborhood != null && neighborhoodCombo.getItems().contains(myNeighborhood)) {
             neighborhoodCombo.setValue(myNeighborhood);
@@ -81,18 +95,22 @@ public class CarrierController {
     @FXML
     public void initialize() {
         neighborhoodCombo.setOnAction(e -> refreshData());
-        completedFilterCombo.setItems(javafx.collections.FXCollections.observableArrayList("Son 24 Saat", "Son 30 Gün"));
+        completedFilterCombo
+                .setItems(javafx.collections.FXCollections.observableArrayList("Son 24 Saat", "Son 30 Gün"));
         completedFilterCombo.setValue("Son 24 Saat");
         completedFilterCombo.setOnAction(e -> updateUI(searchField.getText()));
         searchField.textProperty().addListener((obs, old, val) -> updateUI(val));
-        
-        if(undoButton != null) undoButton.setDisable(true);
-        if(notificationLabel != null) notificationLabel.setVisible(false);
+
+        if (undoButton != null)
+            undoButton.setDisable(true);
+        if (notificationLabel != null)
+            notificationLabel.setVisible(false);
     }
 
     @FXML
     public void refreshData() {
-        if (currentUser == null) return;
+        if (currentUser == null)
+            return;
         try {
             allOrders = OrderDAO.getCarrierDashboardOrders(currentUser.getId(), neighborhoodCombo.getValue());
             updateUI(searchField.getText());
@@ -105,7 +123,7 @@ public class CarrierController {
     }
 
     private void updateUndoButtonState() {
-        if(undoButton != null) {
+        if (undoButton != null) {
             undoButton.setDisable(historyStack.isEmpty());
             undoButton.setText(historyStack.isEmpty() ? "↩ Geri Al" : "↩ Geri Al (" + historyStack.size() + ")");
         }
@@ -119,14 +137,21 @@ public class CarrierController {
         }
 
         ActionRecord lastAction = historyStack.peek();
-        String message = "Son yapılan işlem: \n" + lastAction.description + "\n\nBu işlemi geri almak istediğinizden emin misiniz?";
-        
+        String message = "Son yapılan işlem: \n" + lastAction.description
+                + "\n\nBu işlemi geri almak istediğinizden emin misiniz?";
+
         if (showConfirm("İşlemi Geri Al Onayı", message)) {
             boolean success = false;
             switch (lastAction.type) {
-                case PICKUP: success = OrderDAO.releaseOrderToPool(lastAction.orderId, currentUser.getId()); break;
-                case RELEASE: success = OrderDAO.assignAndPickUp(lastAction.orderId, currentUser.getId()); break;
-                case COMPLETE: success = OrderDAO.undoCompleteOrder(lastAction.orderId, currentUser.getId()); break;
+                case PICKUP:
+                    success = OrderDAO.releaseOrderToPool(lastAction.orderId, currentUser.getId());
+                    break;
+                case RELEASE:
+                    success = OrderDAO.assignAndPickUp(lastAction.orderId, currentUser.getId());
+                    break;
+                case COMPLETE:
+                    success = OrderDAO.undoCompleteOrder(lastAction.orderId, currentUser.getId());
+                    break;
             }
 
             if (success) {
@@ -135,7 +160,7 @@ public class CarrierController {
                 showNotification("Son işlem başarıyla geri alındı.", true);
             } else {
                 showNotification("İşlem geri alınamadı. Durum değişmiş olabilir.", false);
-                historyStack.pop(); 
+                historyStack.pop();
                 refreshData();
             }
         }
@@ -146,11 +171,13 @@ public class CarrierController {
         currentDeliveriesBox.getChildren().clear();
         completedDeliveriesBox.getChildren().clear();
 
-        if (allOrders == null) return;
+        if (allOrders == null)
+            return;
         LocalDateTime now = LocalDateTime.now();
 
         for (Order o : allOrders) {
-            if (!matchesSearch(o, filterText)) continue;
+            if (!matchesSearch(o, filterText))
+                continue;
             VBox card = createOrderCard(o);
 
             if (isPool(o)) {
@@ -167,23 +194,25 @@ public class CarrierController {
 
     private VBox createOrderCard(Order o) {
         VBox card = new VBox(8);
-        String borderColor = "#e0e0e0"; 
-        if (o.getPriorityLevel() == 2) borderColor = "#ffa726";
-        if (o.getPriorityLevel() == 3) borderColor = "#d32f2f";
-        
+        String borderColor = "#e0e0e0";
+        if (o.getPriorityLevel() == 2)
+            borderColor = "#ffa726";
+        if (o.getPriorityLevel() == 3)
+            borderColor = "#d32f2f";
+
         card.setStyle("-fx-background-color: white; -fx-border-color: " + borderColor +
                 "; -fx-border-width: 2; -fx-padding: 12; -fx-background-radius: 10; " +
                 "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 1);");
 
         Label lblId = new Label("📦 Sipariş #" + o.getId());
-        lblId.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;"); 
+        lblId.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
 
         Label lblName = new Label("👤 Müşteri: " + safe(o.getCustomerName()));
-        lblName.setStyle("-fx-text-fill: #34495e; -fx-font-weight: bold;"); 
+        lblName.setStyle("-fx-text-fill: #34495e; -fx-font-weight: bold;");
 
         Label lblAddr = new Label("📍 " + safe(o.getDeliveryNeighborhood()) + "\n" + safe(o.getDeliveryAddress()));
-        lblAddr.setWrapText(true); 
-        lblAddr.setStyle("-fx-text-fill: #555555; -fx-font-size: 11px;"); 
+        lblAddr.setWrapText(true);
+        lblAddr.setStyle("-fx-text-fill: #555555; -fx-font-size: 11px;");
 
         // --- ÖDEME TİPİ VE TUTAR ---
         String paymentText = "";
@@ -197,13 +226,14 @@ public class CarrierController {
         }
 
         Label lblPrice = new Label("Tutar: " + String.format("%.2f", o.getTotalCost()) + " TL");
-        lblPrice.setStyle("-fx-text-fill: #2c3e50; -fx-font-weight: bold;"); 
-        
+        lblPrice.setStyle("-fx-text-fill: #2c3e50; -fx-font-weight: bold;");
+
         Label lblPaymentStatus = new Label(paymentText);
-        lblPaymentStatus.setStyle("-fx-text-fill: white; -fx-background-color: " + paymentColor + "; -fx-padding: 3 6; -fx-background-radius: 4; -fx-font-size: 10px; -fx-font-weight: bold;");
+        lblPaymentStatus.setStyle("-fx-text-fill: white; -fx-background-color: " + paymentColor
+                + "; -fx-padding: 3 6; -fx-background-radius: 4; -fx-font-size: 10px; -fx-font-weight: bold;");
 
         HBox priceBox = new HBox(10, lblPrice, lblPaymentStatus);
-        
+
         // --- KAZANÇ GÖSTERGESİ ---
         Label lblEarnings = new Label("✨ Kazancın: " + String.format("%.2f", o.getCarrierEarnings()) + " TL");
         lblEarnings.setStyle("-fx-text-fill: #8e44ad; -fx-font-size: 11px; -fx-font-weight: bold;");
@@ -232,51 +262,55 @@ public class CarrierController {
 
         if (isPool(o)) {
             Button pickUpBtn = new Button("Teslim Al");
-            pickUpBtn.setStyle("-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5;");
+            pickUpBtn.setStyle(
+                    "-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5;");
             pickUpBtn.setMaxWidth(Double.MAX_VALUE);
             pickUpBtn.setOnAction(e -> handlePickUpInline(o));
             card.getChildren().add(pickUpBtn);
-            
+
         } else if (isActiveMine(o)) {
             HBox actionBox = new HBox(5);
             Button btnComplete = new Button("Teslim Et");
             btnComplete.setStyle("-fx-background-color: #1976d2; -fx-text-fill: white; -fx-cursor: hand;");
             btnComplete.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(btnComplete, javafx.scene.layout.Priority.ALWAYS);
-            
+
             Button btnCancel = new Button("İptal");
             btnCancel.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-cursor: hand;");
-            
+
             btnComplete.setOnAction(e -> handleCompleteOrderWithDate(o));
             btnCancel.setOnAction(e -> handleReleaseOrder(o));
-            
+
             actionBox.getChildren().addAll(btnComplete, btnCancel);
             card.getChildren().add(actionBox);
-            
+
         } else if (isDeliveredMine(o)) {
-            Label lblDelivered = new Label("✅ " + (o.getDeliveryTime() != null ? o.getDeliveryTime().toLocalDateTime().format(dtf) : ""));
+            Label lblDelivered = new Label(
+                    "✅ " + (o.getDeliveryTime() != null ? o.getDeliveryTime().toLocalDateTime().format(dtf) : ""));
             lblDelivered.setStyle("-fx-text-fill: #2ecc71; -fx-font-size: 11px; -fx-font-weight: bold;");
-            
+
             Button btnUndoDelivery = new Button("↩ Hatalı - Geri Al");
-            btnUndoDelivery.setStyle("-fx-background-color: #ffb74d; -fx-text-fill: #3e2723; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 5;");
+            btnUndoDelivery.setStyle(
+                    "-fx-background-color: #ffb74d; -fx-text-fill: #3e2723; -fx-font-size: 10px; -fx-cursor: hand; -fx-background-radius: 5;");
             btnUndoDelivery.setMaxWidth(Double.MAX_VALUE);
             btnUndoDelivery.setOnAction(e -> handleUndoSpecificOrder(o));
-            
+
             card.getChildren().addAll(lblDelivered, btnUndoDelivery);
         }
-        
+
         return card;
     }
 
     private void handlePickUpInline(Order o) {
         try {
             if (OrderDAO.assignAndPickUp(o.getId(), currentUser.getId())) {
-                historyStack.push(new ActionRecord(ActionType.PICKUP, o.getId(), "Sipariş #" + o.getId() + " teslim alındı."));
+                historyStack.push(
+                        new ActionRecord(ActionType.PICKUP, o.getId(), "Sipariş #" + o.getId() + " teslim alındı."));
                 showNotification("Sipariş #" + o.getId() + " alındı.", true);
-                refreshData(); 
+                refreshData();
             } else {
                 showNotification("Sipariş alınamadı! Başka kurye almış olabilir.", false);
-                refreshData(); 
+                refreshData();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -293,9 +327,11 @@ public class CarrierController {
         DatePicker datePicker = new DatePicker(LocalDate.now());
         Spinner<Integer> hourSpinner = new Spinner<>(0, 23, LocalTime.now().getHour());
         Spinner<Integer> minSpinner = new Spinner<>(0, 59, LocalTime.now().getMinute());
-        
-        hourSpinner.setEditable(true); hourSpinner.setPrefWidth(60);
-        minSpinner.setEditable(true); minSpinner.setPrefWidth(60);
+
+        hourSpinner.setEditable(true);
+        hourSpinner.setPrefWidth(60);
+        minSpinner.setEditable(true);
+        minSpinner.setPrefWidth(60);
 
         HBox timeBox = new HBox(5, hourSpinner, new Label(":"), minSpinner);
         VBox content = new VBox(10, new Label("Tarih:"), datePicker, new Label("Saat:"), timeBox);
@@ -303,19 +339,21 @@ public class CarrierController {
 
         dialog.setResultConverter(btn -> {
             if (btn == ButtonType.OK) {
-                return LocalDateTime.of(datePicker.getValue(), LocalTime.of(hourSpinner.getValue(), minSpinner.getValue()));
+                return LocalDateTime.of(datePicker.getValue(),
+                        LocalTime.of(hourSpinner.getValue(), minSpinner.getValue()));
             }
             return null;
         });
 
         dialog.showAndWait().ifPresent(dt -> {
             if (OrderDAO.completeOrder(o.getId(), currentUser.getId(), dt)) {
-                historyStack.push(new ActionRecord(ActionType.COMPLETE, o.getId(), "Sipariş #" + o.getId() + " teslim edildi."));
+                historyStack.push(
+                        new ActionRecord(ActionType.COMPLETE, o.getId(), "Sipariş #" + o.getId() + " teslim edildi."));
                 showNotification("Sipariş tamamlandı!", true);
                 refreshData();
             } else {
                 showNotification("Hata oluştu veya sipariş iptal edildi.", false);
-                refreshData(); 
+                refreshData();
             }
         });
     }
@@ -343,18 +381,20 @@ public class CarrierController {
             }
         }
     }
-    
+
     private void showNotification(String message, boolean isSuccess) {
-        if (notificationLabel == null) return;
+        if (notificationLabel == null)
+            return;
         Platform.runLater(() -> {
             notificationLabel.setText(message);
-            notificationLabel.setStyle("-fx-background-color: " + (isSuccess ? "#2e7d32" : "#c62828") + 
-                                       "; -fx-text-fill: white; -fx-padding: 10 15; -fx-background-radius: 5;");
+            notificationLabel.setStyle("-fx-background-color: " + (isSuccess ? "#2e7d32" : "#c62828") +
+                    "; -fx-text-fill: white; -fx-padding: 10 15; -fx-background-radius: 5;");
             notificationLabel.setVisible(true);
             notificationLabel.setOpacity(1.0);
-            
+
             FadeTransition fadeOut = new FadeTransition(javafx.util.Duration.seconds(3), notificationLabel);
-            fadeOut.setFromValue(1.0); fadeOut.setToValue(0.0);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
             fadeOut.setDelay(javafx.util.Duration.seconds(2));
             fadeOut.setOnFinished(e -> notificationLabel.setVisible(false));
             fadeOut.play();
@@ -362,16 +402,18 @@ public class CarrierController {
     }
 
     private void updateStats() {
-        if (currentUser == null || allOrders == null) return;
+        if (currentUser == null || allOrders == null)
+            return;
         long active = allOrders.stream().filter(this::isActiveMine).count();
         List<Order> myDone = allOrders.stream().filter(this::isDeliveredMine).collect(Collectors.toList());
-        
+
         // Kazanç Hesaplama: Toplam Ciro değil, Kurye Komisyonu Toplamı
         double earnings = myDone.stream().mapToDouble(Order::getCarrierEarnings).sum();
-        
+
         double avgMin = myDone.stream()
                 .filter(o -> o.getOrderTime() != null && o.getDeliveryTime() != null)
-                .mapToLong(o -> Duration.between(o.getOrderTime().toLocalDateTime(), o.getDeliveryTime().toLocalDateTime()).toMinutes())
+                .mapToLong(o -> Duration
+                        .between(o.getOrderTime().toLocalDateTime(), o.getDeliveryTime().toLocalDateTime()).toMinutes())
                 .average().orElse(0.0);
 
         lblActiveOrders.setText("Üzerimde: " + active);
@@ -379,38 +421,55 @@ public class CarrierController {
         lblAvgSpeed.setText("Ort. Hız: " + String.format("%.0f", avgMin) + " dk");
     }
 
-    private boolean isPool(Order o) { return STATUS_POOL.equals(o.getStatus()) && (o.getCarrierId() == null || o.getCarrierId() == 0); }
-    private boolean isActiveMine(Order o) { return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId() && STATUS_OUT.equals(o.getStatus()); }
-    private boolean isDeliveredMine(Order o) { return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId() && STATUS_DELIVERED.equals(o.getStatus()); }
-    
+    private boolean isPool(Order o) {
+        return STATUS_POOL.equals(o.getStatus()) && (o.getCarrierId() == null || o.getCarrierId() == 0);
+    }
+
+    private boolean isActiveMine(Order o) {
+        return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId() && STATUS_OUT.equals(o.getStatus());
+    }
+
+    private boolean isDeliveredMine(Order o) {
+        return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId()
+                && STATUS_DELIVERED.equals(o.getStatus());
+    }
+
     private boolean checkDateFilter(Order o, LocalDateTime now) {
-        if (o.getDeliveryTime() == null) return true;
+        if (o.getDeliveryTime() == null)
+            return true;
         LocalDateTime dt = o.getDeliveryTime().toLocalDateTime();
-        return completedFilterCombo.getValue().equals("Son 24 Saat") ? 
-                dt.isAfter(now.minusHours(24)) : dt.isAfter(now.minusDays(30));
+        return completedFilterCombo.getValue().equals("Son 24 Saat") ? dt.isAfter(now.minusHours(24))
+                : dt.isAfter(now.minusDays(30));
     }
-    
+
     private boolean matchesSearch(Order o, String filterText) {
-        if (filterText == null || filterText.isEmpty()) return true;
+        if (filterText == null || filterText.isEmpty())
+            return true;
         String lower = filterText.toLowerCase(java.util.Locale.forLanguageTag("tr-TR"));
-        return safe(o.getCustomerName()).toLowerCase().contains(lower) || 
-               safe(o.getDeliveryAddress()).toLowerCase().contains(lower) ||
-               safe(o.getDeliveryNeighborhood()).toLowerCase().contains(lower);
+        return safe(o.getCustomerName()).toLowerCase().contains(lower) ||
+                safe(o.getDeliveryAddress()).toLowerCase().contains(lower) ||
+                safe(o.getDeliveryNeighborhood()).toLowerCase().contains(lower);
     }
-    
-    private String safe(String s) { return (s == null) ? "" : s; }
-    
+
+    private String safe(String s) {
+        return (s == null) ? "" : s;
+    }
+
     private boolean showConfirm(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, content, ButtonType.OK, ButtonType.CANCEL);
-        alert.setTitle(title); alert.setHeaderText(null);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
-    
-    @FXML public void handleLogout() {
+
+    @FXML
+    public void handleLogout() {
         try {
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
             Stage stage = (Stage) lblActiveOrders.getScene().getWindow();
             stage.setScene(new Scene(root));
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

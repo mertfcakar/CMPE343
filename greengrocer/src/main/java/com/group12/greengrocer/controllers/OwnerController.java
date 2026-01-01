@@ -48,48 +48,73 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class OwnerController {
-    
+
     private User currentUser;
-    
-    @FXML private Label usernameLabel;
-    @FXML private Label statusLabel;
-    
+
+    @FXML
+    private Label usernameLabel;
+    @FXML
+    private Label statusLabel;
+
     // --- DASHBOARD ---
-    @FXML private Label totalProductsLabel;
-    @FXML private Label activeOrdersLabel;
-    @FXML private Label totalRevenueLabel;
-    @FXML private Label activeCarriersLabel;
-    @FXML private TableView<Order> recentOrdersTable;
-    
+    @FXML
+    private Label totalProductsLabel;
+    @FXML
+    private Label activeOrdersLabel;
+    @FXML
+    private Label totalRevenueLabel;
+    @FXML
+    private Label activeCarriersLabel;
+    @FXML
+    private TableView<Order> recentOrdersTable;
+
     // --- PRODUCTS ---
-    @FXML private TableView<Product> productsTable;
-    @FXML private TextField productSearchField;
-    
+    @FXML
+    private TableView<Product> productsTable;
+    @FXML
+    private TextField productSearchField;
+
     // --- ORDERS ---
-    @FXML private TableView<Order> ordersTable;
-    @FXML private ComboBox<String> orderStatusFilter;
-    @FXML private Label ordersCountLabel;
-    
+    @FXML
+    private TableView<Order> ordersTable;
+    @FXML
+    private ComboBox<String> orderStatusFilter;
+    @FXML
+    private Label ordersCountLabel;
+
     // --- CARRIERS ---
-    @FXML private TableView<User> carriersTable;
-    
+    @FXML
+    private TableView<User> carriersTable;
+
     // --- MESSAGES ---
-    @FXML private ListView<Message> messagesListView;
-    @FXML private Label messageFromLabel;
-    @FXML private Label messageSubjectLabel;
-    @FXML private Label messageDateLabel;
-    @FXML private TextArea messageContentArea;
-    
+    @FXML
+    private ListView<Message> messagesListView;
+    @FXML
+    private Label messageFromLabel;
+    @FXML
+    private Label messageSubjectLabel;
+    @FXML
+    private Label messageDateLabel;
+    @FXML
+    private TextArea messageContentArea;
+
     // --- SETTINGS (COUPONS & LOYALTY) ---
-    @FXML private TableView<Coupon> couponsTable;
-    @FXML private TextField minOrdersField;
-    @FXML private TextField loyaltyDiscountField;
-    @FXML private TextField minCartValueField;
-    @FXML private TextField vatRateField;
+    @FXML
+    private TableView<Coupon> couponsTable;
+    @FXML
+    private TextField minOrdersField;
+    @FXML
+    private TextField loyaltyDiscountField;
+    @FXML
+    private TextField minCartValueField;
+    @FXML
+    private TextField vatRateField;
 
     // --- REPORTS ---
-    @FXML private ComboBox<String> reportTypeCombo;
-    @FXML private VBox reportContentBox;
+    @FXML
+    private ComboBox<String> reportTypeCombo;
+    @FXML
+    private VBox reportContentBox;
 
     private ObservableList<Product> masterProductList = FXCollections.observableArrayList();
     private ObservableList<Order> masterOrderList = FXCollections.observableArrayList();
@@ -99,35 +124,36 @@ public class OwnerController {
         usernameLabel.setText("Owner: " + user.getUsername());
         refreshAllData();
     }
-    
+
     @FXML
     private void initialize() {
         setupProductTable();
         setupOrderTable();
         setupCarrierTable();
         setupCouponTable(); // Kupon tablosunu kur
-        
+
         // Sipariş Filtreleri
-        if(orderStatusFilter != null) {
+        if (orderStatusFilter != null) {
             orderStatusFilter.getItems().addAll("All", "Pending", "Assigned", "Completed", "Cancelled");
             orderStatusFilter.getSelectionModel().selectFirst();
             orderStatusFilter.setOnAction(e -> filterOrders());
         }
-        
+
         // Rapor Tipleri
-        if(reportTypeCombo != null) {
+        if (reportTypeCombo != null) {
             reportTypeCombo.getItems().addAll("Product Revenue", "Carrier Performance");
             reportTypeCombo.getSelectionModel().selectFirst();
         }
-        
+
         // Mesaj Listesi Seçim Listener
-        if(messagesListView != null) {
+        if (messagesListView != null) {
             messagesListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal != null) displayMessageDetails(newVal);
+                if (newVal != null)
+                    displayMessageDetails(newVal);
             });
         }
     }
-    
+
     private void refreshAllData() {
         loadDashboardStats();
         loadProducts();
@@ -145,17 +171,23 @@ public class OwnerController {
         int activeOrders = OrderDAO.getActiveOrderCount();
         double revenue = OrderDAO.getTotalRevenue();
         int carrierCount = UserDAO.getAllCarriers().size();
-        
-        if(totalProductsLabel != null) totalProductsLabel.setText(String.valueOf(prodCount));
-        if(activeOrdersLabel != null) activeOrdersLabel.setText(String.valueOf(activeOrders));
-        if(totalRevenueLabel != null) totalRevenueLabel.setText(String.format("₺%.2f", revenue));
-        if(activeCarriersLabel != null) activeCarriersLabel.setText(String.valueOf(carrierCount));
-        
+
+        if (totalProductsLabel != null)
+            totalProductsLabel.setText(String.valueOf(prodCount));
+        if (activeOrdersLabel != null)
+            activeOrdersLabel.setText(String.valueOf(activeOrders));
+        if (totalRevenueLabel != null)
+            totalRevenueLabel.setText(String.format("₺%.2f", revenue));
+        if (activeCarriersLabel != null)
+            activeCarriersLabel.setText(String.valueOf(carrierCount));
+
         List<Order> allOrders = OrderDAO.getAllOrdersForAdmin();
         ObservableList<Order> recent = FXCollections.observableArrayList();
-        if(allOrders.size() > 5) recent.addAll(allOrders.subList(0, 5));
-        else recent.addAll(allOrders);
-        
+        if (allOrders.size() > 5)
+            recent.addAll(allOrders.subList(0, 5));
+        else
+            recent.addAll(allOrders);
+
         if (recentOrdersTable != null) {
             setupRecentOrdersTable();
             recentOrdersTable.setItems(recent);
@@ -176,7 +208,8 @@ public class OwnerController {
 
     private void loadProducts() {
         masterProductList.setAll(ProductDAO.getAllProducts());
-        if(productsTable != null) productsTable.setItems(masterProductList);
+        if (productsTable != null)
+            productsTable.setItems(masterProductList);
     }
 
     @FXML
@@ -185,10 +218,9 @@ public class OwnerController {
         if (filter.isEmpty()) {
             productsTable.setItems(masterProductList);
         } else {
-            FilteredList<Product> filtered = new FilteredList<>(masterProductList, p -> 
-                p.getName().toLowerCase().contains(filter) || 
-                p.getType().toLowerCase().contains(filter)
-            );
+            FilteredList<Product> filtered = new FilteredList<>(masterProductList,
+                    p -> p.getName().toLowerCase().contains(filter) ||
+                            p.getType().toLowerCase().contains(filter));
             productsTable.setItems(filtered);
         }
     }
@@ -203,18 +235,26 @@ public class OwnerController {
         dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-        TextField nameField = new TextField(); nameField.setPromptText("Name");
-        ComboBox<String> typeCombo = new ComboBox<>(); typeCombo.getItems().addAll("vegetable", "fruit"); typeCombo.setValue("vegetable");
-        TextField priceField = new TextField(); priceField.setPromptText("Price");
-        TextField stockField = new TextField(); stockField.setPromptText("Stock");
-        TextField thresholdField = new TextField(); thresholdField.setPromptText("Threshold");
-        
+        TextField nameField = new TextField();
+        nameField.setPromptText("Name");
+        ComboBox<String> typeCombo = new ComboBox<>();
+        typeCombo.getItems().addAll("vegetable", "fruit");
+        typeCombo.setValue("vegetable");
+        TextField priceField = new TextField();
+        priceField.setPromptText("Price");
+        TextField stockField = new TextField();
+        stockField.setPromptText("Stock");
+        TextField thresholdField = new TextField();
+        thresholdField.setPromptText("Threshold");
+
         Button imgBtn = new Button("Select Image");
         Label imgLabel = new Label("No file selected");
-        final File[] selectedFile = {null};
-        
+        final File[] selectedFile = { null };
+
         imgBtn.setOnAction(e -> {
             FileChooser fc = new FileChooser();
             fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.jpg", "*.png", "*.jpeg"));
@@ -225,12 +265,19 @@ public class OwnerController {
             }
         });
 
-        grid.add(new Label("Name:"), 0, 0); grid.add(nameField, 1, 0);
-        grid.add(new Label("Type:"), 0, 1); grid.add(typeCombo, 1, 1);
-        grid.add(new Label("Price:"), 0, 2); grid.add(priceField, 1, 2);
-        grid.add(new Label("Stock:"), 0, 3); grid.add(stockField, 1, 3);
-        grid.add(new Label("Threshold:"), 0, 4); grid.add(thresholdField, 1, 4);
-        grid.add(new Label("Image:"), 0, 5); grid.add(imgBtn, 1, 5); grid.add(imgLabel, 2, 5);
+        grid.add(new Label("Name:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Type:"), 0, 1);
+        grid.add(typeCombo, 1, 1);
+        grid.add(new Label("Price:"), 0, 2);
+        grid.add(priceField, 1, 2);
+        grid.add(new Label("Stock:"), 0, 3);
+        grid.add(stockField, 1, 3);
+        grid.add(new Label("Threshold:"), 0, 4);
+        grid.add(thresholdField, 1, 4);
+        grid.add(new Label("Image:"), 0, 5);
+        grid.add(imgBtn, 1, 5);
+        grid.add(imgLabel, 2, 5);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -273,15 +320,14 @@ public class OwnerController {
                         showAlert("Error", "This product already exists.");
                         return false;
                     }
-                    
+
                     return ProductDAO.addProduct(
                             name,
                             type,
                             price,
                             stock,
                             threshold,
-                            selectedFile[0]
-                    );
+                            selectedFile[0]);
 
                 } catch (NumberFormatException e) {
                     showAlert("Error", "Please enter valid numeric values.");
@@ -294,11 +340,10 @@ public class OwnerController {
             return null;
         });
 
-
         Optional<Boolean> result = dialog.showAndWait();
         if (result.isPresent() && result.get()) {
             loadProducts();
-            loadDashboardStats(); 
+            loadDashboardStats();
             showAlert("Success", "Product added successfully.");
         }
     }
@@ -318,17 +363,18 @@ public class OwnerController {
             showAlert("Error", "Could not delete product.");
         }
     }
-    
+
     @FXML
     private void handleUpdateProduct() {
         Product selected = productsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
+        if (selected == null)
+            return;
 
         TextInputDialog dialog = new TextInputDialog(String.valueOf(selected.getPrice()));
         dialog.setTitle("Update Price");
         dialog.setHeaderText("Update price for " + selected.getName());
         dialog.setContentText("New Price:");
-        
+
         dialog.showAndWait().ifPresent(priceStr -> {
             try {
                 double newPrice = Double.parseDouble(priceStr);
@@ -353,7 +399,7 @@ public class OwnerController {
             ordersTable.getColumns().get(7).setCellValueFactory(new PropertyValueFactory<>("deliveryTime"));
         }
     }
-    
+
     private void setupRecentOrdersTable() {
         if (recentOrdersTable != null && !recentOrdersTable.getColumns().isEmpty()) {
             recentOrdersTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -370,17 +416,19 @@ public class OwnerController {
     }
 
     private void filterOrders() {
-        if(ordersTable == null) return;
+        if (ordersTable == null)
+            return;
         String status = orderStatusFilter.getValue();
         if (status == null || status.equals("All")) {
             ordersTable.setItems(masterOrderList);
-            if(ordersCountLabel != null) ordersCountLabel.setText("Total: " + masterOrderList.size());
+            if (ordersCountLabel != null)
+                ordersCountLabel.setText("Total: " + masterOrderList.size());
         } else {
-            FilteredList<Order> filtered = new FilteredList<>(masterOrderList, o -> 
-                o.getStatus() != null && o.getStatus().equalsIgnoreCase(status)
-            );
+            FilteredList<Order> filtered = new FilteredList<>(masterOrderList,
+                    o -> o.getStatus() != null && o.getStatus().equalsIgnoreCase(status));
             ordersTable.setItems(filtered);
-            if(ordersCountLabel != null) ordersCountLabel.setText("Total: " + filtered.size());
+            if (ordersCountLabel != null)
+                ordersCountLabel.setText("Total: " + filtered.size());
         }
     }
 
@@ -402,7 +450,8 @@ public class OwnerController {
 
     private void loadCarriers() {
         ObservableList<User> carriers = FXCollections.observableArrayList(UserDAO.getAllCarriers());
-        if(carriersTable != null) carriersTable.setItems(carriers);
+        if (carriersTable != null)
+            carriersTable.setItems(carriers);
     }
 
     @FXML
@@ -415,21 +464,39 @@ public class OwnerController {
         dialog.getDialogPane().getButtonTypes().addAll(hireBtn, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-        TextField userField = new TextField(); userField.setPromptText("Username");
-        PasswordField passField = new PasswordField(); passField.setPromptText("Password");
-        TextField contactField = new TextField(); contactField.setPromptText("Email / Phone");
+        TextField userField = new TextField();
+        userField.setPromptText("Username");
+        PasswordField passField = new PasswordField();
+        passField.setPromptText("Password");
+        // DEĞİŞİKLİK BURADA BAŞLIYOR: Tek contact yerine iki alan
+        TextField emailField = new TextField();
+        emailField.setPromptText("Email Address");
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Phone Number");
 
-        grid.add(new Label("Username:"), 0, 0); grid.add(userField, 1, 0);
-        grid.add(new Label("Password:"), 0, 1); grid.add(passField, 1, 1);
-        grid.add(new Label("Contact:"), 0, 2); grid.add(contactField, 1, 2);
+        grid.add(new Label("Username:"), 0, 0);
+        grid.add(userField, 1, 0);
+        grid.add(new Label("Password:"), 0, 1);
+        grid.add(passField, 1, 1);
+        grid.add(new Label("Email:"), 0, 2);
+        grid.add(emailField, 1, 2);
+        grid.add(new Label("Phone:"), 0, 3);
+        grid.add(phoneField, 1, 3);
 
         dialog.getDialogPane().setContent(grid);
 
         dialog.setResultConverter(btn -> {
             if (btn == hireBtn) {
-                return UserDAO.addCarrier(userField.getText(), passField.getText(), contactField.getText());
+                // UserDAO.addCarrier artık 4 parametre alıyor
+                return UserDAO.addCarrier(
+                        userField.getText(),
+                        passField.getText(),
+                        emailField.getText(),
+                        phoneField.getText());
             }
             return null;
         });
@@ -456,8 +523,7 @@ public class OwnerController {
         Alert confirm = new Alert(
                 Alert.AlertType.CONFIRMATION,
                 "Are you sure you want to fire " + selected.getUsername() + "?",
-                ButtonType.YES, ButtonType.NO
-        );
+                ButtonType.YES, ButtonType.NO);
         confirm.showAndWait();
 
         if (confirm.getResult() == ButtonType.YES) {
@@ -477,7 +543,6 @@ public class OwnerController {
         }
     }
 
-
     // --- CARRIER RATINGS (NEW) ---
     @FXML
     private void handleViewCarrierRatings() {
@@ -493,21 +558,27 @@ public class OwnerController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Carrier Performance");
         alert.setHeaderText("Performance for: " + selected.getUsername());
-        alert.setContentText("Total Completed Deliveries: " + completedDeliveries + "\n\n(Customer rating system integration coming in v2.0)");
+        alert.setContentText("Total Completed Deliveries: " + completedDeliveries
+                + "\n\n(Customer rating system integration coming in v2.0)");
         alert.showAndWait();
     }
 
     // --- MESSAGES ---
     private void loadMessages() {
         List<Message> msgs = MessageDAO.getAllMessages();
-        if(messagesListView != null) messagesListView.setItems(FXCollections.observableArrayList(msgs));
+        if (messagesListView != null)
+            messagesListView.setItems(FXCollections.observableArrayList(msgs));
     }
 
     private void displayMessageDetails(Message msg) {
-        if(messageFromLabel != null) messageFromLabel.setText(msg.getSenderName());
-        if(messageSubjectLabel != null) messageSubjectLabel.setText(msg.getSubject());
-        if(messageDateLabel != null) messageDateLabel.setText(msg.getCreatedAt().toString());
-        if(messageContentArea != null) messageContentArea.setText(msg.getContent());
+        if (messageFromLabel != null)
+            messageFromLabel.setText(msg.getSenderName());
+        if (messageSubjectLabel != null)
+            messageSubjectLabel.setText(msg.getSubject());
+        if (messageDateLabel != null)
+            messageDateLabel.setText(msg.getCreatedAt().toString());
+        if (messageContentArea != null)
+            messageContentArea.setText(msg.getContent());
     }
 
     @FXML
@@ -518,7 +589,8 @@ public class OwnerController {
     @FXML
     private void handleReplyMessage() {
         Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
+        if (selected == null)
+            return;
 
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Reply Message");
@@ -526,17 +598,21 @@ public class OwnerController {
         dialog.setContentText("Message:");
 
         dialog.showAndWait().ifPresent(replyText -> {
-            boolean sent = MessageDAO.replyToMessage(currentUser.getId(), selected.getSenderId(), selected.getSubject(), replyText);
-            if (sent) showAlert("Success", "Reply sent.");
-            else showAlert("Error", "Could not send reply.");
+            boolean sent = MessageDAO.replyToMessage(currentUser.getId(), selected.getSenderId(), selected.getSubject(),
+                    replyText);
+            if (sent)
+                showAlert("Success", "Reply sent.");
+            else
+                showAlert("Error", "Could not send reply.");
         });
     }
 
     @FXML
     private void handleDeleteMessage() {
         Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        
+        if (selected == null)
+            return;
+
         if (MessageDAO.deleteMessage(selected.getId())) {
             loadMessages();
             messageContentArea.clear();
@@ -565,8 +641,10 @@ public class OwnerController {
 
     private void loadSettings() {
         int[] loyalty = SettingsDAO.getLoyaltySettings();
-        if (minOrdersField != null) minOrdersField.setText(String.valueOf(loyalty[0]));
-        if (loyaltyDiscountField != null) loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
+        if (minOrdersField != null)
+            minOrdersField.setText(String.valueOf(loyalty[0]));
+        if (loyaltyDiscountField != null)
+            loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
     }
 
     @FXML
@@ -579,17 +657,26 @@ public class OwnerController {
         dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-        TextField codeField = new TextField(); codeField.setPromptText("Code (e.g. SUMMER25)");
-        TextField discField = new TextField(); discField.setPromptText("Discount %");
-        TextField minField = new TextField(); minField.setPromptText("Min Purchase (TL)");
+        TextField codeField = new TextField();
+        codeField.setPromptText("Code (e.g. SUMMER25)");
+        TextField discField = new TextField();
+        discField.setPromptText("Discount %");
+        TextField minField = new TextField();
+        minField.setPromptText("Min Purchase (TL)");
         DatePicker datePicker = new DatePicker();
 
-        grid.add(new Label("Code:"), 0, 0); grid.add(codeField, 1, 0);
-        grid.add(new Label("Discount (%):"), 0, 1); grid.add(discField, 1, 1);
-        grid.add(new Label("Min Purchase:"), 0, 2); grid.add(minField, 1, 2);
-        grid.add(new Label("Valid Until:"), 0, 3); grid.add(datePicker, 1, 3);
+        grid.add(new Label("Code:"), 0, 0);
+        grid.add(codeField, 1, 0);
+        grid.add(new Label("Discount (%):"), 0, 1);
+        grid.add(discField, 1, 1);
+        grid.add(new Label("Min Purchase:"), 0, 2);
+        grid.add(minField, 1, 2);
+        grid.add(new Label("Valid Until:"), 0, 3);
+        grid.add(datePicker, 1, 3);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -597,12 +684,13 @@ public class OwnerController {
             if (btn == saveBtn) {
                 try {
                     return SettingsDAO.addCoupon(
-                        codeField.getText(),
-                        Double.parseDouble(discField.getText()),
-                        Double.parseDouble(minField.getText()),
-                        datePicker.getValue()
-                    );
-                } catch (Exception e) { return false; }
+                            codeField.getText(),
+                            Double.parseDouble(discField.getText()),
+                            Double.parseDouble(minField.getText()),
+                            datePicker.getValue());
+                } catch (Exception e) {
+                    return false;
+                }
             }
             return null;
         });
@@ -632,7 +720,8 @@ public class OwnerController {
     @FXML
     private void handleGenerateReport() {
         String type = reportTypeCombo.getValue();
-        if (type == null) return;
+        if (type == null)
+            return;
 
         reportContentBox.getChildren().clear();
 
@@ -641,7 +730,7 @@ public class OwnerController {
 
         TableColumn<ReportItem, String> keyCol = new TableColumn<>("Category");
         keyCol.setCellValueFactory(new PropertyValueFactory<>("key"));
-        
+
         TableColumn<ReportItem, String> valCol = new TableColumn<>("Value");
         valCol.setCellValueFactory(new PropertyValueFactory<>("value"));
 
@@ -654,7 +743,7 @@ public class OwnerController {
             valCol.setText("Total Revenue (TL)");
             Map<String, Double> map = OrderDAO.getRevenueByProductReport();
             map.forEach((k, v) -> data.add(new ReportItem(k, String.format("%.2f TL", v))));
-        
+
         } else if (type.equals("Carrier Performance")) {
             keyCol.setText("Carrier Username");
             valCol.setText("Completed Deliveries");
@@ -663,7 +752,7 @@ public class OwnerController {
         }
 
         table.setItems(data);
-        table.setPrefHeight(400); 
+        table.setPrefHeight(400);
         reportContentBox.getChildren().add(table);
     }
 
@@ -678,7 +767,7 @@ public class OwnerController {
         fileChooser.setTitle("Save Report");
         fileChooser.setInitialFileName("Report_" + System.currentTimeMillis() + ".txt");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text Files", "*.txt"));
-        
+
         Stage stage = (Stage) usernameLabel.getScene().getWindow();
         File file = fileChooser.showSaveDialog(stage);
 
@@ -703,20 +792,21 @@ public class OwnerController {
                     writer.println(String.format("%-30s : %s", item.getKey(), item.getValue()));
                 }
             }
-            
+
             writer.println("");
             writer.println("--------------------------------");
             writer.println("End of Report");
-            
+
             showAlert("Success", "Report saved to: " + file.getAbsolutePath());
-            
+
         } catch (Exception e) {
             showAlert("Error", "Could not save file: " + e.getMessage());
         }
     }
 
     // --- OTHER HANDLERS ---
-    @FXML private void handleLogout() {
+    @FXML
+    private void handleLogout() {
         try {
             Stage stage = (Stage) usernameLabel.getScene().getWindow();
             stage.close();
@@ -726,7 +816,9 @@ public class OwnerController {
             loginStage.setTitle("GreenGrocer Login");
             loginStage.setScene(new Scene(root));
             loginStage.show();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showAlert(String title, String content) {
@@ -740,8 +832,18 @@ public class OwnerController {
     public static class ReportItem {
         private String key;
         private String value;
-        public ReportItem(String key, String value) { this.key = key; this.value = value; }
-        public String getKey() { return key; }
-        public String getValue() { return value; }
+
+        public ReportItem(String key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getValue() {
+            return value;
+        }
     }
 }

@@ -25,19 +25,29 @@ import java.util.List;
 public class ShoppingCartController {
 
     // Artık TableView yok, VBox var
-    @FXML private VBox cartItemsContainer;
-    
-    @FXML private Label subtotalLabel;
-    @FXML private Label vatLabel;
-    @FXML private Label discountLabel;
-    @FXML private Label totalLabel;
-    
-    @FXML private TextField couponField;
-    @FXML private Label couponMessageLabel;
-    
-    @FXML private DatePicker deliveryDatePicker;
-    @FXML private ComboBox<String> deliveryTimeCombo;
-    @FXML private Label checkoutMessageLabel;
+    @FXML
+    private VBox cartItemsContainer;
+
+    @FXML
+    private Label subtotalLabel;
+    @FXML
+    private Label vatLabel;
+    @FXML
+    private Label discountLabel;
+    @FXML
+    private Label totalLabel;
+
+    @FXML
+    private TextField couponField;
+    @FXML
+    private Label couponMessageLabel;
+
+    @FXML
+    private DatePicker deliveryDatePicker;
+    @FXML
+    private ComboBox<String> deliveryTimeCombo;
+    @FXML
+    private Label checkoutMessageLabel;
 
     private double discountAmount = 0.0;
     private final double VAT_RATE = 0.18;
@@ -67,7 +77,8 @@ public class ShoppingCartController {
 
     private HBox createCartItemRow(CartItem item) {
         HBox row = new HBox(15);
-        row.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 2, 0, 0, 1);");
+        row.setStyle(
+                "-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 2, 0, 0, 1);");
         row.setAlignment(Pos.CENTER_LEFT);
 
         // 1. Resim
@@ -76,7 +87,10 @@ public class ShoppingCartController {
         imgView.setFitWidth(60);
         imgView.setPreserveRatio(true);
         if (item.getProduct().getImage() != null) {
-            try { imgView.setImage(new Image(new ByteArrayInputStream(item.getProduct().getImage()))); } catch (Exception e) {}
+            try {
+                imgView.setImage(new Image(new ByteArrayInputStream(item.getProduct().getImage())));
+            } catch (Exception e) {
+            }
         }
 
         // 2. Ürün Bilgisi
@@ -86,7 +100,7 @@ public class ShoppingCartController {
         Label unitPriceLbl = new Label(String.format("%.2f TL / kg", item.getProduct().getCurrentPrice()));
         unitPriceLbl.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
         infoBox.getChildren().addAll(nameLbl, unitPriceLbl);
-        
+
         // Spacer
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -94,13 +108,13 @@ public class ShoppingCartController {
         // 3. Miktar Kontrolleri (+ - butonları)
         HBox qtyBox = new HBox(5);
         qtyBox.setAlignment(Pos.CENTER);
-        
+
         Button minusBtn = new Button("-");
         minusBtn.setStyle("-fx-min-width: 30px; -fx-background-color: #eee; -fx-cursor: hand;");
-        
+
         Label qtyLbl = new Label(String.format("%.1f", item.getQuantity()));
         qtyLbl.setStyle("-fx-min-width: 40px; -fx-alignment: center; -fx-font-weight: bold;");
-        
+
         Button plusBtn = new Button("+");
         plusBtn.setStyle("-fx-min-width: 30px; -fx-background-color: #eee; -fx-cursor: hand;");
 
@@ -120,7 +134,8 @@ public class ShoppingCartController {
                 item.addQuantity(0.5);
                 renderCartItems();
             } else {
-                // Stok uyarısı basitçe console veya label (burada sessiz kalıyoruz, UI bozulmasın)
+                // Stok uyarısı basitçe console veya label (burada sessiz kalıyoruz, UI
+                // bozulmasın)
             }
         });
 
@@ -128,11 +143,13 @@ public class ShoppingCartController {
 
         // 4. Toplam Tutar
         Label totalLbl = new Label(String.format("%.2f TL", item.getTotalPrice()));
-        totalLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2e7d32; -fx-min-width: 80px; -fx-alignment: center-right;");
+        totalLbl.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2e7d32; -fx-min-width: 80px; -fx-alignment: center-right;");
 
         // 5. Silme Butonu
         Button delBtn = new Button("✕");
-        delBtn.setStyle("-fx-text-fill: #999; -fx-background-color: transparent; -fx-font-weight: bold; -fx-cursor: hand;");
+        delBtn.setStyle(
+                "-fx-text-fill: #999; -fx-background-color: transparent; -fx-font-weight: bold; -fx-cursor: hand;");
         delBtn.setOnAction(e -> {
             ShoppingCart.getInstance().removeItem(item);
             renderCartItems();
@@ -146,15 +163,16 @@ public class ShoppingCartController {
     private void updateTotals() {
         double subtotal = ShoppingCart.getInstance().calculateSubtotal();
         double vat = subtotal * VAT_RATE;
-        
+
         // Kuponu tekrar kontrol et (Tutar değiştiyse limit altına düşmüş olabilir)
         if (discountAmount > 0) {
             // Basitlik için burada tekrar hesaplamıyoruz ama gerçekte yapılmalı.
             // Şimdilik sadece matematiksel işlem:
         }
-        
+
         double total = subtotal + vat - discountAmount;
-        if (total < 0) total = 0;
+        if (total < 0)
+            total = 0;
 
         subtotalLabel.setText(String.format("%.2f TL", subtotal));
         vatLabel.setText(String.format("%.2f TL", vat));
@@ -170,12 +188,11 @@ public class ShoppingCartController {
                 setDisable(empty || date.isBefore(LocalDate.now()) || date.isAfter(LocalDate.now().plusDays(2)));
             }
         });
-        deliveryDatePicker.setValue(LocalDate.now().plusDays(1)); 
+        deliveryDatePicker.setValue(LocalDate.now().plusDays(1));
 
         deliveryTimeCombo.getItems().addAll(
-            "09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", 
-            "15:00 - 17:00", "17:00 - 19:00", "19:00 - 21:00"
-        );
+                "09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00",
+                "15:00 - 17:00", "17:00 - 19:00", "19:00 - 21:00");
         deliveryTimeCombo.getSelectionModel().select(0);
     }
 
@@ -189,11 +206,12 @@ public class ShoppingCartController {
     @FXML
     private void handleApplyCoupon() {
         String code = couponField.getText().trim();
-        if (code.isEmpty()) return;
+        if (code.isEmpty())
+            return;
 
         List<Coupon> coupons = SettingsDAO.getAllCoupons();
         boolean found = false;
-        
+
         for (Coupon c : coupons) {
             if (c.getCode().equalsIgnoreCase(code) && c.isActive()) {
                 double subtotal = ShoppingCart.getInstance().calculateSubtotal();
@@ -206,7 +224,7 @@ public class ShoppingCartController {
                 } else {
                     couponMessageLabel.setText("Min purchase amount: " + c.getMinPurchaseAmount() + " TL");
                     couponMessageLabel.setStyle("-fx-text-fill: red;");
-                    found = true; 
+                    found = true;
                 }
                 break;
             }
@@ -226,10 +244,10 @@ public class ShoppingCartController {
             checkoutMessageLabel.setText("Cart is empty!");
             return;
         }
-        
+
         LocalDate date = deliveryDatePicker.getValue();
         String time = deliveryTimeCombo.getValue();
-        
+
         if (date == null || time == null) {
             checkoutMessageLabel.setText("Select delivery date/time.");
             return;
@@ -240,10 +258,9 @@ public class ShoppingCartController {
         double total = subtotal + vat - discountAmount;
 
         boolean success = OrderDAO.createOrder(
-            ShoppingCart.getInstance().getCurrentUser(),
-            subtotal, vat, discountAmount, total,
-            date, time
-        );
+                ShoppingCart.getInstance().getCurrentUser(),
+                subtotal, vat, discountAmount, total,
+                date, time);
 
         if (success) {
             ShoppingCart.getInstance().clear();
@@ -252,7 +269,7 @@ public class ShoppingCartController {
             alert.setHeaderText("Order Placed!");
             alert.setContentText("Your fresh products will be delivered on " + date + " at " + time);
             alert.showAndWait();
-            
+
             ((Stage) checkoutMessageLabel.getScene().getWindow()).close();
         } else {
             checkoutMessageLabel.setText("Order failed. Database error.");
@@ -263,5 +280,5 @@ public class ShoppingCartController {
     private void handleContinueShopping() {
         ((Stage) checkoutMessageLabel.getScene().getWindow()).close();
     }
-    
+
 }

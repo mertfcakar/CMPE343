@@ -2,23 +2,32 @@ package com.group12.greengrocer.controllers;
 
 import java.security.SecureRandom;
 import com.group12.greengrocer.database.UserDAO;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import java.io.IOException;
 
 public class RegisterController {
 
     @FXML private TextField usernameField;
-    @FXML private PasswordField hiddenPasswordField; // Gizli Şifre
-    @FXML private TextField visiblePasswordField;    // Görünür Şifre
+    @FXML private PasswordField hiddenPasswordField;
+    @FXML private TextField visiblePasswordField;
     @FXML private CheckBox showPasswordCheck;
     
     @FXML private TextField addressField;
     @FXML private ComboBox<String> neighborhoodCombo;
-    @FXML private TextField contactField;
+    
+    @FXML private TextField emailField;
+    @FXML private TextField phoneField;
+    
     @FXML private Label errorLabel;
     @FXML private Label strengthLabel;
 
@@ -28,20 +37,132 @@ public class RegisterController {
             "Beşiktaş", "Kadıköy", "Şişli", "Üsküdar", "Fatih", "Maltepe", "Bakırköy", "Sarıyer", "Beyoğlu"
         );
         
-        usernameField.setOnKeyTyped(e -> errorLabel.setText(""));
-        addressField.setOnKeyTyped(e -> errorLabel.setText(""));
-
-        // --- BINDING: İki kutunun metnini birbirine bağla ---
+        // Şifre Binding
         visiblePasswordField.textProperty().bindBidirectional(hiddenPasswordField.textProperty());
 
-        // Şifre Gücü Dinleyicisi
         hiddenPasswordField.textProperty().addListener((obs, oldVal, newVal) -> {
             updatePasswordStrength(newVal);
-            errorLabel.setText("");
+            // Şifre yazılınca hata mesajını temizle
+            resetFieldStyle(visiblePasswordField);
+            resetFieldStyle(hiddenPasswordField);
         });
+
+        // --- IPUCU (TOOLTIP) EKLEME ---
+        emailField.setTooltip(new Tooltip("Örn: isim@ornek.com"));
+        phoneField.setTooltip(new Tooltip("Başında 0 olmadan 10 hane. Örn: 5321234567"));
+
+        // --- YAZARKEN HATALARI TEMİZLEME ---
+        usernameField.setOnKeyTyped(e -> { errorLabel.setText(""); resetFieldStyle(usernameField); });
+        emailField.setOnKeyTyped(e -> { errorLabel.setText(""); resetFieldStyle(emailField); });
+        phoneField.setOnKeyTyped(e -> { errorLabel.setText(""); resetFieldStyle(phoneField); });
+        addressField.setOnKeyTyped(e -> { errorLabel.setText(""); resetFieldStyle(addressField); });
     }
 
-    // --- ŞİFRE GÖSTER / GİZLE ---
+    @FXML
+    private void handleRegister(ActionEvent event) {
+        // Önce tüm stilleri sıfırla
+        resetAllStyles();
+        errorLabel.setText("");
+
+        String user = usernameField.getText().trim();
+        String pass = hiddenPasswordField.getText();
+        String addr = addressField.getText().trim();
+        String hood = neighborhoodCombo.getValue();
+        String email = emailField.getText().trim();
+        String phone = phoneField.getText().trim();
+
+        boolean hasError = false;
+        StringBuilder errorMsg = new StringBuilder();
+
+        // 1. Boş Alan Kontrolü
+        if (user.isEmpty() || pass.isEmpty() || addr.isEmpty() || hood == null || email.isEmpty() || phone.isEmpty()) {
+            errorLabel.setText("⚠ Lütfen tüm alanları doldurunuz!");
+            return; 
+        }
+
+        // 2. Kullanıcı Adı Kontrolü
+        if (user.length() < 3) {
+            setErrorStyle(usernameField);
+            errorMsg.append("• Kullanıcı adı en az 3 karakter olmalı.\n");
+            hasError = true;
+        } else if (UserDAO.isUserExists(user)) {
+            setErrorStyle(usernameField);
+            errorMsg.append("• Bu kullanıcı adı zaten alınmış.\n");
+            hasError = true;
+        }
+
+        // 3. Email Format Kontrolü
+        // Regex: birşey@birşey.birşey
+        if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+            setErrorStyle(emailField);
+            errorMsg.append("• Geçersiz Email! (Örn: user@mail.com)\n");
+            hasError = true;
+        }
+
+        // 4. Telefon Format Kontrolü
+        // Regex: Sadece rakam, 10 veya 11 hane
+        if (!phone.matches("^\\d{10,11}$")) {
+            setErrorStyle(phoneField);
+            errorMsg.append("• Geçersiz Telefon! (Sadece rakam, 10-11 hane)\n");
+            hasError = true;
+        }
+
+        // 5. Şifre Kontrolü
+        if (!pass.matches("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{6,}$")) {
+            setErrorStyle(hiddenPasswordField);
+            errorMsg.append("• Şifre Zayıf! En az 6 karakter, 1 harf ve 1 rakam içermeli.\n");
+            hasError = true;
+        }
+
+        // Hata varsa göster ve çık
+        if (hasError) {
+            errorLabel.setText(errorMsg.toString());
+            errorLabel.setTextFill(Color.RED);
+            return;
+        }
+
+        // --- KAYIT İŞLEMİ ---
+        if (UserDAO.registerCustomer(user, pass, addr, hood, email, phone)) {
+            showInfo("Başarılı", "Kayıt tamamlandı!\nHoşgeldin, " + user);
+            switchToLogin(event);
+        } else {
+            errorLabel.setText("⚠ Veritabanı hatası oluştu. Tekrar deneyin.");
+        }
+    }
+
+    // --- YARDIMCI METOTLAR ---
+
+    private void setErrorStyle(Control node) {
+        // Kırmızı çerçeve ekle
+        node.setStyle("-fx-border-color: #d32f2f; -fx-border-width: 1px; -fx-border-radius: 5; -fx-background-radius: 5;");
+    }
+
+    private void resetFieldStyle(Control node) {
+        // Normal stil (Mavi/Gri çerçeve yok veya varsayılan)
+        node.setStyle("-fx-background-radius: 5;"); 
+    }
+
+    private void resetAllStyles() {
+        resetFieldStyle(usernameField);
+        resetFieldStyle(emailField);
+        resetFieldStyle(phoneField);
+        resetFieldStyle(addressField);
+        resetFieldStyle(hiddenPasswordField);
+        resetFieldStyle(visiblePasswordField);
+    }
+
+    @FXML
+    private void switchToLogin(ActionEvent event) {
+        try {
+            Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(new Scene(root, 960, 540));
+            stage.setTitle("GreenGrocer - Login");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @FXML
     private void handleTogglePassword() {
         if (showPasswordCheck.isSelected()) {
@@ -53,115 +174,43 @@ public class RegisterController {
         }
     }
 
-    private void updatePasswordStrength(String password) {
-        int len = password.length();
-        if (len == 0) {
-            strengthLabel.setText("");
-        } else if (len < 4) {
-            strengthLabel.setText("Strength: Too Short (Weak)");
-            strengthLabel.setTextFill(Color.RED);
-        } else if (len < 8) {
-            strengthLabel.setText("Strength: Medium");
-            strengthLabel.setTextFill(Color.ORANGE);
-        } else {
-            strengthLabel.setText("Strength: Strong ✅");
-            strengthLabel.setTextFill(Color.GREEN);
-        }
-    }
-
     @FXML
     private void handleSuggestPassword() {
         String randomPass = generateRandomPass();
         hiddenPasswordField.setText(randomPass);
-        
-        // Kullanıcı generate yapınca şifreyi otomatik göster
         showPasswordCheck.setSelected(true);
-        handleTogglePassword(); 
+        handleTogglePassword();
     }
 
     @FXML
     private void handleCopyPassword() {
         String pass = hiddenPasswordField.getText();
-        if (pass.isEmpty()) return;
-
-        ClipboardContent content = new ClipboardContent();
-        content.putString(pass);
-        Clipboard.getSystemClipboard().setContent(content);
-
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Password Copied");
-        alert.setHeaderText("Important Reminder!");
-        alert.setContentText("Password copied to clipboard.\n\nPLEASE NOTE IT DOWN IMMEDIATELY!\nIf you lose it, you may lose access.");
-        alert.showAndWait();
+        if (!pass.isEmpty()) {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(pass);
+            Clipboard.getSystemClipboard().setContent(content);
+        }
     }
 
     private String generateRandomPass() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 12; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
+        for (int i = 0; i < 12; i++) sb.append(chars.charAt(random.nextInt(chars.length())));
         return sb.toString();
     }
 
-    @FXML
-    private void handleRegister() {
-        String user = usernameField.getText().trim();
-        String pass = hiddenPasswordField.getText(); // Binding olduğu için günceldir
-        String addr = addressField.getText().trim();
-        String hood = neighborhoodCombo.getValue();
-        String contact = contactField.getText().trim();
-
-        // 1. Boş Alanlar
-        if (user.isEmpty() || pass.isEmpty() || addr.isEmpty() || hood == null || contact.isEmpty()) {
-            showError("⚠ Please fill in all fields!");
-            return;
-        }
-
-        // 2. Kullanıcı Adı
-        if (user.length() < 3) {
-            showError("⚠ Username too short (min 3 chars).");
-            return;
-        }
-        if (UserDAO.isUserExists(user)) {
-            showError("⚠ Username '" + user + "' is already taken.");
-            return;
-        }
-
-        // 3. Şifre (Min 4 Karakter)
-        if (pass.length() < 4) {
-            showError("⚠ Password too weak! Use at least 4 chars.");
-            return;
-        }
-
-        // 4. İletişim (Email veya Telefon Regex)
-        boolean isEmail = contact.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
-        boolean isPhone = contact.matches("^\\+?[0-9 ]{10,15}$");
-        
-        if (!isEmail && !isPhone) {
-            showError("⚠ Invalid Contact! Enter Email or Phone.");
-            return;
-        }
-
-        // 5. Adres (Min 10 karakter + boşluk)
-        if (addr.length() < 10 || !addr.contains(" ")) {
-            showError("⚠ Address too short. Please enter full address.");
-            return;
-        }
-
-        // Kayıt
-        if (UserDAO.registerCustomer(user, pass, addr, hood, contact)) {
-            showInfo("Success!", "Registration Completed.\nWelcome, " + user + "!");
-            ((Stage) usernameField.getScene().getWindow()).close();
-        } else {
-            showError("⚠ Database error occurred.");
-        }
+    private void updatePasswordStrength(String password) {
+        int len = password.length();
+        if (len == 0) strengthLabel.setText("");
+        else if (len < 4) { strengthLabel.setText("Weak"); strengthLabel.setTextFill(Color.RED); }
+        else if (len < 8) { strengthLabel.setText("Medium"); strengthLabel.setTextFill(Color.ORANGE); }
+        else { strengthLabel.setText("Strong ✅"); strengthLabel.setTextFill(Color.GREEN); }
     }
 
     private void showError(String message) {
-        errorLabel.setStyle("-fx-text-fill: #d32f2f;");
         errorLabel.setText(message);
+        errorLabel.setTextFill(Color.RED);
     }
 
     private void showInfo(String title, String content) {

@@ -18,7 +18,7 @@ import com.group12.greengrocer.utils.ShoppingCart;
 public class UserDAO {
 
     /**
-     * Kullanıcı girişi: BINARY kullanarak harf duyarlılığını zorunlu kılıyoruz.
+     * GÜNCELLENDİ: Kullanıcı girişi. Email ve Telefon sütunlarını çeker.
      */
     public static User login(String username, String password) {
         String sql = "SELECT * FROM users WHERE BINARY username = ? AND BINARY password = ?";
@@ -37,7 +37,8 @@ public class UserDAO {
                         rs.getString("password"),
                         rs.getString("role"),
                         rs.getString("address"),
-                        rs.getString("contact_details"),
+                        rs.getString("email"),       // contact_details yerine email
+                        rs.getString("phone_number"),// contact_details yerine phone
                         rs.getString("neighborhood")
                     );
                 }
@@ -68,10 +69,10 @@ public class UserDAO {
     }
 
     /**
-     * Müşteri Kaydı (Register)
+     * GÜNCELLENDİ: Müşteri Kaydı (Register). Artık Email ve Telefon ayrı ayrı alınıyor.
      */
-    public static boolean registerCustomer(String username, String password, String address, String neighborhood, String contact) {
-        String sql = "INSERT INTO users (username, password, role, address, neighborhood, contact_details) VALUES (?, ?, 'customer', ?, ?, ?)";
+    public static boolean registerCustomer(String username, String password, String address, String neighborhood, String email, String phone) {
+        String sql = "INSERT INTO users (username, password, role, address, neighborhood, email, phone_number) VALUES (?, ?, 'customer', ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -80,7 +81,8 @@ public class UserDAO {
             ps.setString(2, password);
             ps.setString(3, address);
             ps.setString(4, neighborhood);
-            ps.setString(5, contact);
+            ps.setString(5, email);
+            ps.setString(6, phone);
             
             return ps.executeUpdate() > 0;
             
@@ -91,20 +93,21 @@ public class UserDAO {
     }
 
     /**
-     * [GÜVENLİ] Şifre Güncelleme
-     * Sadece Kullanıcı Adı VE İletişim Bilgisi (Email/Tel) eşleşirse şifreyi değiştirir.
+     * YENİ EKLENDİ: Şifremi Unuttum (Güvenli)
+     * Kullanıcı adı + Email + Telefon eşleşirse şifre değişir.
      */
-    public static boolean updatePasswordSecure(String username, String contact, String newPassword) {
-        String sql = "UPDATE users SET password = ? WHERE BINARY username = ? AND contact_details = ?";
+    public static boolean resetPasswordSecure(String username, String email, String phone, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE BINARY username = ? AND email = ? AND phone_number = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
             ps.setString(1, newPassword);
             ps.setString(2, username);
-            ps.setString(3, contact);
+            ps.setString(3, email);
+            ps.setString(4, phone);
             
-            return ps.executeUpdate() > 0; // 0 dönerse bilgiler eşleşmiyor demektir.
+            return ps.executeUpdate() > 0; // 0 dönerse bilgiler uyuşmuyor demektir.
             
         } catch (SQLException e) {
             e.printStackTrace();
@@ -114,6 +117,9 @@ public class UserDAO {
 
     // --- OWNER (PATRON) İŞLEMLERİ ---
 
+    /**
+     * GÜNCELLENDİ: Tüm kuryeleri getirirken yeni User yapısını kullanır.
+     */
     public static List<User> getAllCarriers() {
         List<User> carriers = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE role = 'carrier'";
@@ -128,7 +134,8 @@ public class UserDAO {
                     rs.getString("password"),
                     "carrier",
                     rs.getString("address"),
-                    rs.getString("contact_details"),
+                    rs.getString("email"),
+                    rs.getString("phone_number"),
                     rs.getString("neighborhood")
                 ));
             }
@@ -138,13 +145,20 @@ public class UserDAO {
         return carriers;
     }
 
-    public static boolean addCarrier(String username, String password, String contact) {
-        String sql = "INSERT INTO users (username, password, role, contact_details) VALUES (?, ?, 'carrier', ?)";
+    /**
+     * GÜNCELLENDİ: Kurye eklerken email ve telefon zorunluluğu veritabanında olduğu için
+     * bu metodu güncelledim. Eğer OwnerController'dan tek bir 'contact' geliyorsa
+     * onu 'phone' kabul edip, maile geçici bir değer atayabiliriz veya o tarafı da güncelleyebiliriz.
+     * Şimdilik: Email ve Phone parametresi alacak şekilde güncelledim.
+     */
+    public static boolean addCarrier(String username, String password, String email, String phone) {
+        String sql = "INSERT INTO users (username, password, role, email, phone_number) VALUES (?, ?, 'carrier', ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             ps.setString(2, password);
-            ps.setString(3, contact);
+            ps.setString(3, email);
+            ps.setString(4, phone);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -164,11 +178,10 @@ public class UserDAO {
         }
     }
 
-    // --- SİPARİŞ OLUŞTURMA (ÖDEME YÖNTEMİ DESTEKLİ) ---
+    // --- SİPARİŞ OLUŞTURMA (SENİN ORİJİNAL KODUN) ---
     public static boolean createOrder(User user, double subtotal, double vat, double discount, double total, 
                                       LocalDate date, String timeSlot) {
         
-        // payment_method sütunu eklendiği için varsayılan değer gönderiyoruz
         String orderSql = "INSERT INTO orders (user_id, status, subtotal, vat_amount, discount_amount, total_cost, " +
                           "order_time, requested_delivery_date, delivery_neighborhood, delivery_address, payment_method) " +
                           "VALUES (?, 'pending', ?, ?, ?, ?, NOW(), ?, ?, ?, 'CASH_ON_DELIVERY')";
@@ -240,14 +253,18 @@ public class UserDAO {
         }
     }
 
-    public static boolean updateUserProfile(int userId, String newAddress, String newContact, String newPassword) {
-        String sql = "UPDATE users SET address = ?, contact_details = ?, password = ? WHERE id = ?";
+    /**
+     * GÜNCELLENDİ: Profil güncelleme artık mail ve telefonu ayrı günceller.
+     */
+    public static boolean updateUserProfile(int userId, String newAddress, String newEmail, String newPhone, String newPassword) {
+        String sql = "UPDATE users SET address = ?, email = ?, phone_number = ?, password = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, newAddress);
-            ps.setString(2, newContact);
-            ps.setString(3, newPassword);
-            ps.setInt(4, userId);
+            ps.setString(2, newEmail);
+            ps.setString(3, newPhone);
+            ps.setString(4, newPassword);
+            ps.setInt(5, userId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { return false; }
     }

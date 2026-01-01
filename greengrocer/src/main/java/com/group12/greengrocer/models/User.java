@@ -6,24 +6,26 @@ public class User {
     private String password;
     private String role;
     private String address;
-    private String contactDetails;
+    private String email;        // Yeni: ContactDetails yerine geldi
+    private String phoneNumber;  // Yeni: ContactDetails yerine geldi
     private String neighborhood;
 
-    // BOŞ CONSTRUCTOR (Hata almamak için mutlaka dursun)
+    // Boş Constructor
     public User() {}
 
-    // TÜM PARAMETRELİ CONSTRUCTOR (UserDAO bunu kullanacak)
-    public User(int id, String username, String password, String role, String address, String contactDetails, String neighborhood) {
+    // Tam Parametreli Constructor
+    public User(int id, String username, String password, String role, String address, String email, String phoneNumber, String neighborhood) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.role = role;
         this.address = address;
-        this.contactDetails = contactDetails;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
         this.neighborhood = neighborhood;
     }
 
-    // GETTER VE SETTERLAR
+    // GETTER & SETTER METOTLARI
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -39,9 +41,15 @@ public class User {
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
 
-    public String getContactDetails() { return contactDetails; }
-    public void setContactDetails(String contactDetails) { this.contactDetails = contactDetails; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
     public String getNeighborhood() { return neighborhood; }
     public void setNeighborhood(String neighborhood) { this.neighborhood = neighborhood; }
+    
+    // Eski kodların patlamaması için geçici bir uyumluluk metodu (İstersen kaldırabilirsin)
+    public String getContactDetails() { return email + " / " + phoneNumber; }
 }

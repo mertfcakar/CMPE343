@@ -12,27 +12,32 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="12.0" style="-fx-background-color: white; -fx-padding: 25;" 
+<VBox alignment="CENTER" prefHeight="540.0" prefWidth="960.0" spacing="15.0" 
+      style="-fx-background-color: linear-gradient(to bottom right, #e8f5e9, #ffffff);" 
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
       fx:controller="com.group12.greengrocer.controllers.RegisterController">
 
     <!-- Başlık -->
-    <Label text="New Customer Registration" textFill="#2e7d32">
+    <Label text="Create Account" textFill="#2e7d32">
         <font>
-            <Font name="System Bold" size="22.0" />
+            <Font name="Segoe UI Bold" size="32.0" />
         </font>
     </Label>
 
-    <VBox spacing="5.0" maxWidth="350">
+    <!-- Kayıt Formu Kutusu -->
+    <VBox maxWidth="400.0" spacing="10.0" 
+          style="-fx-background-color: white; -fx-padding: 30; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);">
+        
+        <Label text="Personal Information" style="-fx-font-weight: bold; -fx-text-fill: #555;" />
+        
         <!-- Kullanıcı Adı -->
-        <Label style="-fx-font-weight: bold;" text="Username:" />
-        <TextField fx:id="usernameField" promptText="Choose a unique username" style="-fx-background-radius: 5;" />
+        <TextField fx:id="usernameField" prefHeight="35.0" promptText="Username" style="-fx-background-radius: 5;" />
 
-        <!-- ŞİFRE ALANI (StackPane ile Gizli/Açık Şifre Üst Üste) -->
+        <!-- Şifre Alanı (StackPane ve Butonlar) -->
         <Label style="-fx-font-weight: bold;" text="Password:" />
         <HBox spacing="5" alignment="CENTER_LEFT">
             <StackPane HBox.hgrow="ALWAYS">
-                <!-- Görünür Şifre -->
+                <!-- Görünür Şifre (Controller'da çağrıldığı için burada olması ZORUNLU) -->
                 <TextField fx:id="visiblePasswordField" promptText="Create a password" 
                            visible="false" managed="false" style="-fx-background-radius: 5;"/>
                 <!-- Gizli Şifre -->
@@ -40,39 +45,45 @@
                                style="-fx-background-radius: 5;"/>
             </StackPane>
             
-            <!-- Butonlar -->
             <Button onAction="#handleSuggestPassword" text="Generate" 
                     style="-fx-font-size: 10px; -fx-background-color: #2196f3; -fx-text-fill: white; -fx-cursor: hand;"/>
             <Button onAction="#handleCopyPassword" text="Copy" 
                     style="-fx-font-size: 10px; -fx-background-color: #ff9800; -fx-text-fill: white; -fx-cursor: hand;"/>
         </HBox>
         
-        <!-- Şifreyi Göster Checkbox -->
-        <CheckBox fx:id="showPasswordCheck" text="Show Password" 
-                  style="-fx-font-size: 11px; -fx-text-fill: #555;" onAction="#handleTogglePassword"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <CheckBox fx:id="showPasswordCheck" text="Show Password" 
+                      style="-fx-font-size: 11px; -fx-text-fill: #555;" onAction="#handleTogglePassword"/>
+            <Label fx:id="strengthLabel" text="" textFill="RED" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+        </HBox>
+        
+        <!-- İletişim Bilgileri (Email ve Telefon) -->
+        <Label text="Contact Details" style="-fx-font-weight: bold; -fx-text-fill: #555;">
+            <VBox.margin><Insets top="5"/></VBox.margin>
+        </Label>
+        
+        <HBox spacing="10.0">
+            <TextField fx:id="emailField" prefHeight="35.0" promptText="Email Address" HBox.hgrow="ALWAYS" style="-fx-background-radius: 5;" />
+            <TextField fx:id="phoneField" prefHeight="35.0" promptText="Phone (5XX...)" HBox.hgrow="ALWAYS" style="-fx-background-radius: 5;" />
+        </HBox>
 
-        <!-- Şifre Gücü Göstergesi -->
-        <Label fx:id="strengthLabel" text="" textFill="RED" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+        <!-- Adres Bilgileri -->
+        <Label text="Address" style="-fx-font-weight: bold; -fx-text-fill: #555;">
+            <VBox.margin><Insets top="5"/></VBox.margin>
+        </Label>
+        
+        <ComboBox fx:id="neighborhoodCombo" prefHeight="35.0" maxWidth="Infinity" promptText="Select Neighborhood" style="-fx-background-radius: 5;" />
+        <TextField fx:id="addressField" prefHeight="35.0" promptText="Full Address (Street, Apt...)" style="-fx-background-radius: 5;" />
 
-        <!-- Adres -->
-        <Label style="-fx-font-weight: bold;" text="Full Address:" />
-        <TextField fx:id="addressField" promptText="Street, Apt, No..." style="-fx-background-radius: 5;" />
+        <!-- Hata Mesajı -->
+        <Label fx:id="errorLabel" text="" wrapText="true" textFill="#d32f2f" alignment="CENTER" maxWidth="Infinity" />
 
-        <!-- Semt -->
-        <Label style="-fx-font-weight: bold;" text="Neighborhood:" />
-        <ComboBox fx:id="neighborhoodCombo" maxWidth="Infinity" promptText="Select Region" style="-fx-background-radius: 5;" />
-
-        <!-- İletişim -->
-        <Label style="-fx-font-weight: bold;" text="Contact Info:" />
-        <TextField fx:id="contactField" promptText="Phone or Email" style="-fx-background-radius: 5;" />
+        <!-- Kayıt Ol Butonu -->
+        <Button onAction="#handleRegister" text="REGISTER" prefHeight="40.0" maxWidth="Infinity" 
+                style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 5;" />
+        
+        <!-- Geri Dön Butonu -->
+        <Button onAction="#switchToLogin" text="Back to Login" prefHeight="30.0" maxWidth="Infinity" 
+                style="-fx-background-color: transparent; -fx-text-fill: #7f8c8d; -fx-cursor: hand; -fx-border-color: #bdc3c7; -fx-border-radius: 5;" />
     </VBox>
-
-    <!-- Hata Mesajı -->
-    <Label fx:id="errorLabel" textFill="#d32f2f" wrapText="true" maxWidth="350" textAlignment="CENTER"/>
-
-    <!-- Kayıt Butonu -->
-    <Button onAction="#handleRegister" text="Register Now" 
-            style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;" 
-            prefWidth="200.0" prefHeight="40.0" />
-
 </VBox>
