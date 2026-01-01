@@ -21,31 +21,35 @@ import com.group12.greengrocer.utils.ShoppingCart;
 
 public class OrderDAO {
 
-    public static boolean createOrder(User user, double subtotal, double vat, double discount, double total, 
-                                      LocalDate date, String timeSlot) {
-        
-        // Varsayılan olarak CASH_ON_DELIVERY kaydediyoruz. İstersen arayüzden seçtirip buraya parametre geçebilirsin.
+    public static boolean createOrder(User user, double subtotal, double vat, double discount, double total,LocalDate date, String timeSlot) {
+
         String orderSql = "INSERT INTO orders (user_id, status, subtotal, vat_amount, discount_amount, total_cost, " +
-                          "order_time, requested_delivery_date, delivery_neighborhood, delivery_address, payment_method) " +
-                          "VALUES (?, 'pending', ?, ?, ?, ?, NOW(), ?, ?, ?, 'CASH_ON_DELIVERY')";
-        
+                "order_time, requested_delivery_date, delivery_neighborhood, delivery_address, payment_method) " +
+                "VALUES (?, 'pending', ?, ?, ?, ?, NOW(), ?, ?, ?, 'CASH_ON_DELIVERY')";
+
         String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price) " +
-                         "VALUES (?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?)";
+
+        String stockCheckSql = "SELECT stock FROM products WHERE id = ? FOR UPDATE";
+        String updateStockSql = "UPDATE products SET stock = stock - ? WHERE id = ?";
 
         String startTime = timeSlot.split(" - ")[0];
-        if (startTime.length() == 4) startTime = "0" + startTime; 
-        
+        if (startTime.length() == 4) startTime = "0" + startTime;
+
         Timestamp deliveryTs = Timestamp.valueOf(date.atTime(LocalTime.parse(startTime)));
 
         Connection conn = null;
         PreparedStatement psOrder = null;
         PreparedStatement psItem = null;
+        PreparedStatement psCheck = null;
+        PreparedStatement psUpdateStock = null;
         ResultSet rs = null;
 
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); 
+            conn.setAutoCommit(false);
 
+            //  ORDER INSERT 
             psOrder = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS);
             psOrder.setInt(1, user.getId());
             psOrder.setDouble(2, subtotal);
@@ -55,20 +59,38 @@ public class OrderDAO {
             psOrder.setTimestamp(6, deliveryTs);
             psOrder.setString(7, user.getNeighborhood());
             psOrder.setString(8, user.getAddress());
-            
-            int affectedRows = psOrder.executeUpdate();
-            if (affectedRows == 0) throw new SQLException("Creating order failed, no rows affected.");
 
-            int orderId = 0;
+            if (psOrder.executeUpdate() == 0)
+                throw new SQLException("Order creation failed.");
+
             rs = psOrder.getGeneratedKeys();
-            if (rs.next()) {
-                orderId = rs.getInt(1);
-            } else {
-                throw new SQLException("Creating order failed, no ID obtained.");
-            }
+            if (!rs.next())
+                throw new SQLException("Order ID not generated.");
 
+            int orderId = rs.getInt(1);
+
+            psCheck = conn.prepareStatement(stockCheckSql);
+            psUpdateStock = conn.prepareStatement(updateStockSql);
             psItem = conn.prepareStatement(itemSql);
+
+            // ORDER ITEMS
             for (CartItem item : ShoppingCart.getInstance().getItems()) {
+
+                psCheck.setInt(1, item.getProduct().getId());
+                ResultSet rsStock = psCheck.executeQuery();
+
+                if (!rsStock.next())
+                    throw new SQLException("Product not found.");
+
+                double stock = rsStock.getDouble("stock");
+
+                if (stock < item.getQuantity())
+                    throw new SQLException("Not enough stock for " + item.getProduct().getName());
+
+                double finalPrice = item.getProduct().getCurrentPrice();
+
+
+                // ORDER ITEM INSERT
                 psItem.setInt(1, orderId);
                 psItem.setInt(2, item.getProduct().getId());
                 psItem.setString(3, item.getProduct().getName());
@@ -76,25 +98,40 @@ public class OrderDAO {
                 psItem.setDouble(5, item.getProduct().getCurrentPrice());
                 psItem.setDouble(6, item.getTotalPrice());
                 psItem.addBatch();
-            }
-            psItem.executeBatch();
 
-            conn.commit(); 
+                // UPDATE STOCK
+                psUpdateStock.setDouble(1, item.getQuantity());
+                psUpdateStock.setInt(2, item.getProduct().getId());
+                psUpdateStock.executeUpdate();
+            }
+
+            psItem.executeBatch();
+            conn.commit();
             return true;
 
         } catch (SQLException e) {
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ignored) {}
             e.printStackTrace();
             return false;
+
         } finally {
             try { if (rs != null) rs.close(); } catch (SQLException e) {}
             try { if (psOrder != null) psOrder.close(); } catch (SQLException e) {}
             try { if (psItem != null) psItem.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.setAutoCommit(true); conn.close(); } catch (SQLException e) {}
+            try { if (psCheck != null) psCheck.close(); } catch (SQLException e) {}
+            try { if (psUpdateStock != null) psUpdateStock.close(); } catch (SQLException e) {}
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {}
         }
     }
 
-    public static List<Order> getCarrierDashboardOrders(int carrierId, String neighborhood) {
+     public static List<Order> getCarrierDashboardOrders(int carrierId, String neighborhood) {
         List<Order> orders = new ArrayList<>();
         boolean isAllRegions = neighborhood == null || neighborhood.equalsIgnoreCase("All") || neighborhood.equalsIgnoreCase("Tüm İstanbul");
 
@@ -143,6 +180,7 @@ public class OrderDAO {
         return items;
     }
 
+
     public static boolean assignAndPickUp(int orderId, int carrierId) {
         String sql = "UPDATE orders SET carrier_id = ?, status = 'assigned' WHERE id = ? AND status = 'pending'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -163,6 +201,23 @@ public class OrderDAO {
         } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
+    public static boolean hasActiveOrders(int carrierId) {
+    String sql = "SELECT COUNT(*) FROM orders WHERE carrier_id = ? AND status != 'completed'";
+    try (Connection con = DatabaseConnection.getConnection();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+
+        ps.setInt(1, carrierId);
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            return rs.getInt(1) > 0;
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return false;
+}
+
     public static boolean completeOrder(int orderId, int carrierId, LocalDateTime deliveryDateTime) {
         String sql = "UPDATE orders SET status = 'completed', delivery_time = ? WHERE id = ? AND carrier_id = ? AND status = 'assigned'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -175,14 +230,71 @@ public class OrderDAO {
     }
 
     public static boolean undoCompleteOrder(int orderId, int carrierId) {
-        String sql = "UPDATE orders SET status = 'assigned', delivery_time = NULL WHERE id = ? AND carrier_id = ? AND status = 'completed'";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, orderId);
-            ps.setInt(2, carrierId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) { e.printStackTrace(); return false; }
+
+        String updateOrderSql = 
+            "UPDATE orders SET status = 'assigned', delivery_time = NULL " +
+            "WHERE id = ? AND carrier_id = ? AND status = 'completed'";
+
+        String getItemsSql = 
+            "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
+
+        String updateStockSql = 
+            "UPDATE products SET stock = stock + ? WHERE id = ?";
+
+        Connection conn = null;
+        PreparedStatement psUpdateOrder = null;
+        PreparedStatement psGetItems = null;
+        PreparedStatement psUpdateStock = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            psUpdateOrder = conn.prepareStatement(updateOrderSql);
+            psUpdateOrder.setInt(1, orderId);
+            psUpdateOrder.setInt(2, carrierId);
+
+            int updated = psUpdateOrder.executeUpdate();
+            if (updated == 0) {
+                conn.rollback();
+                return false;
+            }
+
+            psGetItems = conn.prepareStatement(getItemsSql);
+            psGetItems.setInt(1, orderId);
+            rs = psGetItems.executeQuery();
+
+            psUpdateStock = conn.prepareStatement(updateStockSql);
+            while (rs.next()) {
+                psUpdateStock.setDouble(1, rs.getDouble("quantity"));
+                psUpdateStock.setInt(2, rs.getInt("product_id"));
+                psUpdateStock.addBatch();
+            }
+
+            psUpdateStock.executeBatch();
+
+            conn.commit();
+            return true;
+
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+            return false;
+
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception ignored) {}
+            try { if (psUpdateOrder != null) psUpdateOrder.close(); } catch (Exception ignored) {}
+            try { if (psGetItems != null) psGetItems.close(); } catch (Exception ignored) {}
+            try { if (psUpdateStock != null) psUpdateStock.close(); } catch (Exception ignored) {}
+            try { if (conn != null) conn.close(); } catch (Exception ignored) {}
+        }
     }
+
 
     public static List<Order> getAllOrdersForAdmin() {
         List<Order> orders = new ArrayList<>();
@@ -265,12 +377,11 @@ public class OrderDAO {
         order.setDeliveryTime(rs.getTimestamp("delivery_time"));
         order.setRequestedDeliveryDate(rs.getTimestamp("requested_delivery_date"));
         
-        // --- YENİ EKLENEN SÜTUN OKUMA ---
         try {
             String pm = rs.getString("payment_method");
             order.setPaymentMethod(pm != null ? pm : "CASH_ON_DELIVERY");
         } catch (Exception e) {
-            order.setPaymentMethod("CASH_ON_DELIVERY"); // Sütun yoksa hata vermesin diye
+            order.setPaymentMethod("CASH_ON_DELIVERY"); 
         }
         
         int cId = rs.getInt("carrier_id");

@@ -1,5 +1,12 @@
 package com.group12.greengrocer.controllers;
 
+import java.io.File;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import com.group12.greengrocer.database.MessageDAO;
 import com.group12.greengrocer.database.OrderDAO;
 import com.group12.greengrocer.database.ProductDAO;
@@ -19,19 +26,26 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
-import java.io.File;
-import java.io.PrintWriter;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 public class OwnerController {
     
@@ -223,21 +237,63 @@ public class OwnerController {
         dialog.setResultConverter(btn -> {
             if (btn == saveButton) {
                 try {
+                    String name = nameField.getText();
+                    String type = typeCombo.getValue();
+
+                    double price = Double.parseDouble(priceField.getText());
+                    double stock = Double.parseDouble(stockField.getText());
+                    double threshold = Double.parseDouble(thresholdField.getText());
+
+                    if (name == null || name.trim().isEmpty()) {
+                        showAlert("Error", "Product name cannot be empty.");
+                        return false;
+                    }
+
+                    if (price <= 0) {
+                        showAlert("Error", "Price must be greater than 0.");
+                        return false;
+                    }
+
+                    if (stock < 0) {
+                        showAlert("Error", "Stock cannot be negative.");
+                        return false;
+                    }
+
+                    if (threshold <= 0) {
+                        showAlert("Error", "Threshold must be greater than 0.");
+                        return false;
+                    }
+
+                    if (type == null) {
+                        showAlert("Error", "Please select a product type.");
+                        return false;
+                    }
+
+                    if (ProductDAO.productExists(name, type)) {
+                        showAlert("Error", "This product already exists.");
+                        return false;
+                    }
+                    
                     return ProductDAO.addProduct(
-                        nameField.getText(),
-                        typeCombo.getValue(),
-                        Double.parseDouble(priceField.getText()),
-                        Double.parseDouble(stockField.getText()),
-                        Double.parseDouble(thresholdField.getText()),
-                        selectedFile[0]
+                            name,
+                            type,
+                            price,
+                            stock,
+                            threshold,
+                            selectedFile[0]
                     );
+
+                } catch (NumberFormatException e) {
+                    showAlert("Error", "Please enter valid numeric values.");
+                    return false;
                 } catch (Exception e) {
-                    showAlert("Error", "Invalid input: " + e.getMessage());
+                    showAlert("Error", "Unexpected error: " + e.getMessage());
                     return false;
                 }
             }
             return null;
         });
+
 
         Optional<Boolean> result = dialog.showAndWait();
         if (result.isPresent() && result.get()) {
@@ -396,11 +452,21 @@ public class OwnerController {
             showAlert("Warning", "Select a carrier to fire.");
             return;
         }
-        
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to fire " + selected.getUsername() + "?", ButtonType.YES, ButtonType.NO);
+
+        Alert confirm = new Alert(
+                Alert.AlertType.CONFIRMATION,
+                "Are you sure you want to fire " + selected.getUsername() + "?",
+                ButtonType.YES, ButtonType.NO
+        );
         confirm.showAndWait();
-        
+
         if (confirm.getResult() == ButtonType.YES) {
+
+            if (OrderDAO.hasActiveOrders(selected.getId())) {
+                showAlert("Error", "This carrier has active deliveries and cannot be removed.");
+                return;
+            }
+
             if (UserDAO.deleteUser(selected.getId())) {
                 loadCarriers();
                 loadDashboardStats();
@@ -411,6 +477,7 @@ public class OwnerController {
         }
     }
 
+
     // --- CARRIER RATINGS (NEW) ---
     @FXML
     private void handleViewCarrierRatings() {
@@ -420,7 +487,6 @@ public class OwnerController {
             return;
         }
 
-        // Kurye performansını OrderDAO'dan çekelim
         Map<String, Integer> performance = OrderDAO.getCarrierPerformanceReport();
         int completedDeliveries = performance.getOrDefault(selected.getUsername(), 0);
 

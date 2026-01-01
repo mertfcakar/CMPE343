@@ -1,13 +1,17 @@
 package com.group12.greengrocer.database;
 
-import com.group12.greengrocer.models.Product;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.sql.*;
+import java.sql.Blob;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.group12.greengrocer.models.Product;
 
 public class ProductDAO {
     
@@ -22,6 +26,7 @@ public class ProductDAO {
 
             while (rs.next()) {
                 Product p = new Product();
+
                 p.setId(rs.getInt("id"));
                 p.setName(rs.getString("name"));
                 p.setType(rs.getString("type"));
@@ -29,24 +34,50 @@ public class ProductDAO {
                 p.setStock(rs.getDouble("stock"));
                 p.setThreshold(rs.getDouble("threshold"));
 
-                // Resim verisini al
                 Blob blob = rs.getBlob("image");
                 if (blob != null) {
                     p.setImage(blob.getBytes(1, (int) blob.length()));
                 }
-                
+
                 products.add(p);
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return products;
+    }
+
+    public static boolean productExists(String name, String type) {
+        String sql = "SELECT COUNT(*) FROM products WHERE name = ? AND type = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, name);
+            ps.setString(2, type);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     // YENİ ÜRÜN EKLE (RESİMLİ)
     public static boolean addProduct(String name, String type, double price, double stock, double threshold, File imageFile) {
-        String sql = "INSERT INTO products (name, type, price, stock, threshold, image) VALUES (?, ?, ?, ?, ?, ?)";
         
+        if (productExists(name, type)) {
+            return false;
+        }
+        String sql = "INSERT INTO products (name, type, price, stock, threshold, image) VALUES (?, ?, ?, ?, ?, ?)";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
