@@ -1,7 +1,6 @@
 package com.group12.greengrocer.controllers;
 
 import java.io.File;
-import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +40,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.Separator;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.GridPane;
@@ -161,6 +161,7 @@ public class OwnerController {
         setupOrderTable();
         setupCarrierTable();
         setupCouponTable(); // Kupon tablosunu kur
+        setupRecentOrdersTable(); // Recent Orders tablosunu kur
 
         // Sipariş Filtreleri
         if (orderStatusFilter != null) {
@@ -200,34 +201,40 @@ public class OwnerController {
     // --- DASHBOARD ---
     private void loadDashboardStats() {
         try {
-            int prodCount = ProductDAO.getAllProducts().size();
-            int activeOrders = OrderDAO.getActiveOrderCount();
-            double revenue = OrderDAO.getTotalRevenue();
-            int carrierCount = UserDAO.getAllCarriers().size();
+        int prodCount = ProductDAO.getAllProducts().size();
+        int activeOrders = OrderDAO.getActiveOrderCount();
+        double revenue = OrderDAO.getTotalRevenue();
+        int carrierCount = UserDAO.getAllCarriers().size();
 
-            if (totalProductsLabel != null)
-                totalProductsLabel.setText(String.valueOf(prodCount));
-            if (activeOrdersLabel != null)
-                activeOrdersLabel.setText(String.valueOf(activeOrders));
-            if (totalRevenueLabel != null)
-                totalRevenueLabel.setText(String.format("₺%.2f", revenue));
-            if (activeCarriersLabel != null)
-                activeCarriersLabel.setText(String.valueOf(carrierCount));
+        if (totalProductsLabel != null)
+            totalProductsLabel.setText(String.valueOf(prodCount));
+        if (activeOrdersLabel != null)
+            activeOrdersLabel.setText(String.valueOf(activeOrders));
+        if (totalRevenueLabel != null)
+            totalRevenueLabel.setText(String.format("₺%.2f", revenue));
+        if (activeCarriersLabel != null)
+            activeCarriersLabel.setText(String.valueOf(carrierCount));
 
-            List<Order> allOrders = OrderDAO.getAllOrdersForAdmin();
-            ObservableList<Order> recent = FXCollections.observableArrayList();
+        List<Order> allOrders = OrderDAO.getAllOrdersForAdmin();
+        ObservableList<Order> recent = FXCollections.observableArrayList();
+        if (allOrders != null && !allOrders.isEmpty()) {
             if (allOrders.size() > 5)
                 recent.addAll(allOrders.subList(0, 5));
             else
                 recent.addAll(allOrders);
+        }
 
-            if (recentOrdersTable != null) {
-                setupRecentOrdersTable();
-                recentOrdersTable.setItems(recent);
+        if (recentOrdersTable != null) {
+            recentOrdersTable.setItems(recent);
+            // Debug için
+            System.out.println("Recent orders loaded: " + recent.size());
+            if (!recent.isEmpty()) {
+                System.out.println("First order: " + recent.get(0).getId() + " - " + recent.get(0).getCustomerName());
             }
-            
-            // Load charts
-            loadDashboardCharts();
+        }
+        
+        // Load charts
+        loadDashboardCharts();
         } catch (Exception e) {
             showAlert("Error", "Failed to load dashboard stats: " + e.getMessage());
         }
@@ -603,13 +610,13 @@ public class OwnerController {
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 try {
-                    if (ProductDAO.deleteProduct(selected.getId())) {
-                        loadProducts();
-                        loadDashboardStats();
-                        showAlert("Success", "Product deleted.");
-                    } else {
-                        showAlert("Error", "Could not delete product.");
-                    }
+        if (ProductDAO.deleteProduct(selected.getId())) {
+            loadProducts();
+            loadDashboardStats();
+            showAlert("Success", "Product deleted.");
+        } else {
+            showAlert("Error", "Could not delete product.");
+        }
                 } catch (Exception e) {
                     showAlert("Error", "Error deleting product: " + e.getMessage());
                 }
@@ -724,7 +731,7 @@ public class OwnerController {
                             selectedFile[0]);
 
                     if (success) {
-                        loadProducts();
+                loadProducts();
                         loadDashboardStats();
                         return true;
                     } else {
@@ -732,7 +739,7 @@ public class OwnerController {
                         return false;
                     }
 
-                } catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                     showAlert("Error", "Please enter valid numeric values for price, stock, and threshold.");
                     return false;
                 } catch (Exception e) {
@@ -796,12 +803,123 @@ public class OwnerController {
     }
 
     private void setupRecentOrdersTable() {
-        if (recentOrdersTable != null && !recentOrdersTable.getColumns().isEmpty()) {
+        if (recentOrdersTable == null) return;
+        
+        // Eğer sütunlar boşsa, önce sütunları oluştur
+        if (recentOrdersTable.getColumns().isEmpty()) {
+            TableColumn<Order, Integer> idCol = new TableColumn<>("Order ID");
+            idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+            idCol.setPrefWidth(80);
+            
+            TableColumn<Order, String> customerCol = new TableColumn<>("Customer");
+            customerCol.setCellValueFactory(new PropertyValueFactory<>("customerName"));
+            customerCol.setPrefWidth(150);
+            
+            TableColumn<Order, String> totalCol = new TableColumn<>("Total");
+            totalCol.setCellValueFactory(data -> {
+                double total = data.getValue().getTotalCost();
+                return new SimpleStringProperty(String.format("%.2f TL", total));
+            });
+            totalCol.setPrefWidth(100);
+            
+            TableColumn<Order, String> statusCol = new TableColumn<>("Status");
+            statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+            statusCol.setCellFactory(column -> {
+                return new TableCell<Order, String>() {
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                            setStyle("");
+                        } else {
+                            setText(item);
+                            String status = item.toLowerCase();
+                            if (status.contains("pending")) {
+                                setStyle("-fx-background-color: #fff3e0; -fx-text-fill: #f57c00; -fx-font-weight: bold;");
+                            } else if (status.contains("assigned")) {
+                                setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1976d2; -fx-font-weight: bold;");
+                            } else if (status.contains("completed")) {
+                                setStyle("-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+                            } else if (status.contains("cancelled")) {
+                                setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-weight: bold;");
+                            } else {
+                                setStyle("-fx-background-color: #f5f5f5; -fx-text-fill: #666;");
+                            }
+                        }
+                    }
+                };
+            });
+            statusCol.setPrefWidth(120);
+            
+            TableColumn<Order, String> dateCol = new TableColumn<>("Date");
+            dateCol.setCellValueFactory(data -> {
+                java.sql.Timestamp time = data.getValue().getOrderTime();
+                if (time != null) {
+                    return new SimpleStringProperty(time.toString().substring(0, 16));
+                }
+                return new SimpleStringProperty("-");
+            });
+            dateCol.setPrefWidth(150);
+            
+            recentOrdersTable.getColumns().addAll(idCol, customerCol, totalCol, statusCol, dateCol);
+        } else {
+            // Sütunlar varsa, sadece cell value factory'leri ayarla
             recentOrdersTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
             recentOrdersTable.getColumns().get(1).setCellValueFactory(new PropertyValueFactory<>("customerName"));
-            recentOrdersTable.getColumns().get(2).setCellValueFactory(new PropertyValueFactory<>("totalCost"));
-            recentOrdersTable.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("status"));
-            recentOrdersTable.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("orderTime"));
+            
+            // Total column
+            if (recentOrdersTable.getColumns().size() > 2) {
+                TableColumn<Order, String> totalCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(2);
+                totalCol.setCellValueFactory(data -> {
+                    double total = data.getValue().getTotalCost();
+                    return new SimpleStringProperty(String.format("%.2f TL", total));
+                });
+            }
+            
+            // Status column için renklendirme
+            if (recentOrdersTable.getColumns().size() > 3) {
+                TableColumn<Order, String> statusCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(3);
+                statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+                statusCol.setCellFactory(column -> {
+                    return new TableCell<Order, String>() {
+                        @Override
+                        protected void updateItem(String item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty || item == null) {
+                                setText(null);
+                                setStyle("");
+                            } else {
+                                setText(item);
+                                String status = item.toLowerCase();
+                                if (status.contains("pending")) {
+                                    setStyle("-fx-background-color: #fff3e0; -fx-text-fill: #f57c00; -fx-font-weight: bold;");
+                                } else if (status.contains("assigned")) {
+                                    setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1976d2; -fx-font-weight: bold;");
+                                } else if (status.contains("completed")) {
+                                    setStyle("-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+                                } else if (status.contains("cancelled")) {
+                                    setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-weight: bold;");
+                                } else {
+                                    setStyle("-fx-background-color: #f5f5f5; -fx-text-fill: #666;");
+                                }
+                            }
+                        }
+                    };
+                });
+            }
+            
+            // Date column
+            if (recentOrdersTable.getColumns().size() > 4) {
+                TableColumn<Order, String> dateCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(4);
+                dateCol.setCellValueFactory(data -> {
+                    java.sql.Timestamp time = data.getValue().getOrderTime();
+                    if (time != null) {
+                        return new SimpleStringProperty(time.toString().substring(0, 16));
+                    }
+                    return new SimpleStringProperty("-");
+                });
+            }
         }
     }
 
@@ -950,8 +1068,8 @@ public class OwnerController {
         try {
             List<OrderDAO.CarrierRating> ratings = OrderDAO.getCarrierRatings(selected.getId());
             double avgRating = OrderDAO.getCarrierAverageRating(selected.getId());
-            Map<String, Integer> performance = OrderDAO.getCarrierPerformanceReport();
-            int completedDeliveries = performance.getOrDefault(selected.getUsername(), 0);
+        Map<String, Integer> performance = OrderDAO.getCarrierPerformanceReport();
+        int completedDeliveries = performance.getOrDefault(selected.getUsername(), 0);
 
             Dialog<Void> dialog = new Dialog<>();
             dialog.setTitle("Carrier Ratings & Performance");
@@ -1152,7 +1270,7 @@ public class OwnerController {
             showAlert("Warning", "Please select a conversation first.");
             return;
         }
-        
+
         String txt = chatInput.getText().trim();
         if (txt.isEmpty()) return;
         
@@ -1185,7 +1303,7 @@ public class OwnerController {
             if (response == ButtonType.OK) {
                 try {
                     if (MessageDAO.deleteChatTopic(currentChatCustomerId, currentChatSubject)) {
-                        loadMessages();
+            loadMessages();
                         if (chatMessagesBox != null) chatMessagesBox.getChildren().clear();
                         if (chatCurrentTopicLabel != null) chatCurrentTopicLabel.setText("-");
                         if (chatCustomerNameLabel != null) chatCustomerNameLabel.setText("-");
@@ -1223,13 +1341,13 @@ public class OwnerController {
             Integer[] loyalty = SettingsDAO.getLoyaltySettings();
             if (minOrdersField != null) {
                 if (loyalty[0] != null) {
-                    minOrdersField.setText(String.valueOf(loyalty[0]));
+            minOrdersField.setText(String.valueOf(loyalty[0]));
                 } else {
                     minOrdersField.setText(""); // Boş bırak
                 }
             }
-            if (loyaltyDiscountField != null)
-                loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
+        if (loyaltyDiscountField != null)
+            loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
             
             double minCartValue = SettingsDAO.getMinCartValue();
             if (minCartValueField != null)
@@ -1494,103 +1612,119 @@ public class OwnerController {
         reportContentBox.getChildren().clear();
 
         try {
+            // Header - Resmi kağıt gibi
+            VBox reportContainer = new VBox(10);
+            reportContainer.setStyle("-fx-background-color: white; -fx-padding: 30;");
+            
+            // Green Grocer Başlığı
+            Label headerLabel = new Label("GREEN GROCER");
+            headerLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2e7d32; -fx-alignment: center;");
+            headerLabel.setAlignment(Pos.CENTER);
+            headerLabel.setMaxWidth(Double.MAX_VALUE);
+            
+            // Rapor Adı (Ortada)
+            Label reportTitleLabel = new Label(type);
+            reportTitleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #333; -fx-alignment: center;");
+            reportTitleLabel.setAlignment(Pos.CENTER);
+            reportTitleLabel.setMaxWidth(Double.MAX_VALUE);
+            
+            // Tarih
+            Label dateLabel = new Label("Date: " + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666; -fx-alignment: center;");
+            dateLabel.setAlignment(Pos.CENTER);
+            dateLabel.setMaxWidth(Double.MAX_VALUE);
+            
+            Separator separator = new Separator();
+            
+            reportContainer.getChildren().addAll(headerLabel, reportTitleLabel, dateLabel, separator);
+            
+            // Table
+            TableView<ReportItem> table = new TableView<>();
+            table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+            table.setStyle("-fx-background-color: white;");
+            
+            TableColumn<ReportItem, String> keyCol = new TableColumn<>("Item");
+            keyCol.setCellValueFactory(new PropertyValueFactory<>("key"));
+            keyCol.setStyle("-fx-font-weight: bold;");
+            keyCol.setPrefWidth(400);
+            
+            TableColumn<ReportItem, String> valCol = new TableColumn<>("Value");
+            valCol.setCellValueFactory(new PropertyValueFactory<>("value"));
+            valCol.setPrefWidth(200);
+            
+            table.getColumns().add(keyCol);
+            table.getColumns().add(valCol);
+            
+            ObservableList<ReportItem> data = FXCollections.observableArrayList();
+            
             if (type.contains("Revenue by Time")) {
-                // Time-based reports with charts
                 String period = type.contains("Daily") ? "daily" : 
                                type.contains("Weekly") ? "weekly" : "monthly";
-                Map<String, Double> data = OrderDAO.getRevenueByTimeReport(period);
+                Map<String, Double> reportData = OrderDAO.getRevenueByTimeReport(period);
                 
-                if (data.isEmpty()) {
+                if (reportData.isEmpty()) {
                     Label noDataLabel = new Label("No data available for this period.");
                     noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
-                    reportContentBox.getChildren().add(noDataLabel);
-                    return;
+                    reportContainer.getChildren().add(noDataLabel);
+                } else {
+                    keyCol.setText("Period");
+                    valCol.setText("Revenue (TL)");
+                    reportData.forEach((k, v) -> data.add(new ReportItem(k, String.format("%.2f TL", v))));
+                    table.setItems(data);
+                    table.setPrefHeight(400);
+                    reportContainer.getChildren().add(table);
                 }
-
-                // Create Bar Chart
-                CategoryAxis xAxis = new CategoryAxis();
-                NumberAxis yAxis = new NumberAxis();
-                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-                barChart.setTitle("Revenue by " + period.substring(0, 1).toUpperCase() + period.substring(1));
-                barChart.setLegendVisible(false);
-
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
-                data.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
-                barChart.getData().add(series);
-                barChart.setPrefHeight(400);
-                barChart.setPrefWidth(800);
-
-                reportContentBox.getChildren().add(barChart);
-
-            } else if (type.equals("Revenue by Amount Range")) {
-                Map<String, Double> data = OrderDAO.getRevenueByAmountRange();
                 
-                if (data.isEmpty()) {
+            } else if (type.equals("Revenue by Amount Range")) {
+                Map<String, Double> reportData = OrderDAO.getRevenueByAmountRange();
+                
+                if (reportData.isEmpty()) {
                     Label noDataLabel = new Label("No data available.");
                     noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
-                    reportContentBox.getChildren().add(noDataLabel);
-                    return;
+                    reportContainer.getChildren().add(noDataLabel);
+                } else {
+                    keyCol.setText("Amount Range");
+                    valCol.setText("Revenue (TL)");
+                    reportData.forEach((k, v) -> data.add(new ReportItem(k, String.format("%.2f TL", v))));
+                    table.setItems(data);
+                    table.setPrefHeight(400);
+                    reportContainer.getChildren().add(table);
                 }
-
-                // Create Pie Chart
-                PieChart pieChart = new PieChart();
-                pieChart.setTitle("Revenue by Amount Range");
-                data.forEach((k, v) -> pieChart.getData().add(new PieChart.Data(k + " (" + String.format("%.2f TL", v) + ")", v)));
-                pieChart.setPrefHeight(400);
-                pieChart.setPrefWidth(600);
-
-                reportContentBox.getChildren().add(pieChart);
-
+                
             } else if (type.equals("Product Revenue")) {
                 Map<String, Double> map = OrderDAO.getRevenueByProductReport();
                 
                 if (map.isEmpty()) {
                     Label noDataLabel = new Label("No product revenue data available.");
                     noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
-                    reportContentBox.getChildren().add(noDataLabel);
-                    return;
+                    reportContainer.getChildren().add(noDataLabel);
+                } else {
+                    keyCol.setText("Product Name");
+                    valCol.setText("Total Revenue (TL)");
+                    map.forEach((k, v) -> data.add(new ReportItem(k, String.format("%.2f TL", v))));
+                    table.setItems(data);
+                    table.setPrefHeight(400);
+                    reportContainer.getChildren().add(table);
                 }
-
-                // Create Bar Chart
-                CategoryAxis xAxis = new CategoryAxis();
-                NumberAxis yAxis = new NumberAxis();
-                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-                barChart.setTitle("Product Revenue");
-                barChart.setLegendVisible(false);
-
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
-                map.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
-                barChart.getData().add(series);
-                barChart.setPrefHeight(400);
-                barChart.setPrefWidth(800);
-
-                reportContentBox.getChildren().add(barChart);
-
+                
             } else if (type.equals("Carrier Performance")) {
                 Map<String, Integer> map = OrderDAO.getCarrierPerformanceReport();
                 
                 if (map.isEmpty()) {
                     Label noDataLabel = new Label("No carrier performance data available.");
                     noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
-                    reportContentBox.getChildren().add(noDataLabel);
-                    return;
+                    reportContainer.getChildren().add(noDataLabel);
+                } else {
+                    keyCol.setText("Carrier Username");
+                    valCol.setText("Completed Deliveries");
+                    map.forEach((k, v) -> data.add(new ReportItem(k, String.valueOf(v))));
+                    table.setItems(data);
+                    table.setPrefHeight(400);
+                    reportContainer.getChildren().add(table);
                 }
-
-                // Create Bar Chart
-                CategoryAxis xAxis = new CategoryAxis();
-                NumberAxis yAxis = new NumberAxis();
-                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-                barChart.setTitle("Carrier Performance (Completed Deliveries)");
-                barChart.setLegendVisible(false);
-
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
-                map.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
-                barChart.getData().add(series);
-                barChart.setPrefHeight(400);
-                barChart.setPrefWidth(800);
-
-                reportContentBox.getChildren().add(barChart);
             }
+            
+            reportContentBox.getChildren().add(reportContainer);
         } catch (Exception e) {
             showAlert("Error", "Failed to generate report: " + e.getMessage());
             e.printStackTrace();
@@ -1605,44 +1739,155 @@ public class OwnerController {
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Save Report");
-        fileChooser.setInitialFileName("Report_" + System.currentTimeMillis() + ".txt");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text Files", "*.txt"));
+        fileChooser.setTitle("Save Report as PDF");
+        fileChooser.setInitialFileName("Report_" + System.currentTimeMillis() + ".pdf");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
 
         Stage stage = (Stage) usernameLabel.getScene().getWindow();
         File file = fileChooser.showSaveDialog(stage);
 
         if (file != null) {
-            saveReportToFile(file);
+            saveReportToPDF(file);
         }
     }
 
-    private void saveReportToFile(File file) {
-        try (PrintWriter writer = new PrintWriter(file)) {
-            writer.println("GREEN GROCER - MANAGEMENT REPORT");
-            writer.println("--------------------------------");
-            writer.println("Report Type: " + reportTypeCombo.getValue());
-            writer.println("Date: " + LocalDateTime.now());
-            writer.println("--------------------------------");
-            writer.println("");
+    private void saveReportToPDF(File file) {
+        try {
+            com.itextpdf.text.Document document = new com.itextpdf.text.Document();
+            com.itextpdf.text.pdf.PdfWriter.getInstance(document, new java.io.FileOutputStream(file));
+            document.open();
 
+            String reportType = reportTypeCombo.getValue();
+            
+            // Başlık - GREEN GROCER (En üst ortada)
+            com.itextpdf.text.Font titleFont = com.itextpdf.text.FontFactory.getFont(
+                com.itextpdf.text.FontFactory.HELVETICA_BOLD, 32, com.itextpdf.text.BaseColor.GREEN);
+            com.itextpdf.text.Paragraph title = new com.itextpdf.text.Paragraph("GREEN GROCER", titleFont);
+            title.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
+            document.add(title);
+            
+            document.add(new com.itextpdf.text.Paragraph(" "));
+            
+            // Rapor Adı (Ortada)
+            com.itextpdf.text.Font reportTitleFont = com.itextpdf.text.FontFactory.getFont(
+                com.itextpdf.text.FontFactory.HELVETICA_BOLD, 20, com.itextpdf.text.BaseColor.BLACK);
+            com.itextpdf.text.Paragraph reportTitle = new com.itextpdf.text.Paragraph(reportType, reportTitleFont);
+            reportTitle.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
+            document.add(reportTitle);
+            
+            // Tarih
+            com.itextpdf.text.Font dateFont = com.itextpdf.text.FontFactory.getFont(
+                com.itextpdf.text.FontFactory.HELVETICA, 12, com.itextpdf.text.BaseColor.GRAY);
+            com.itextpdf.text.Paragraph date = new com.itextpdf.text.Paragraph(
+                "Date: " + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), 
+                dateFont);
+            date.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
+            document.add(date);
+            
+            document.add(new com.itextpdf.text.Paragraph(" "));
+            document.add(new com.itextpdf.text.Paragraph("--------------------------------"));
+            document.add(new com.itextpdf.text.Paragraph(" "));
+
+            // Tablo verilerini al - reportContentBox'tan
             VBox box = (VBox) reportContentBox;
-            if (!box.getChildren().isEmpty() && box.getChildren().get(0) instanceof TableView) {
-                @SuppressWarnings("unchecked")
-                TableView<ReportItem> table = (TableView<ReportItem>) box.getChildren().get(0);
-                for (ReportItem item : table.getItems()) {
-                    writer.println(String.format("%-30s : %s", item.getKey(), item.getValue()));
+            List<ReportItem> reportItems = new java.util.ArrayList<>();
+            
+            if (!box.getChildren().isEmpty() && box.getChildren().get(0) instanceof VBox) {
+                VBox reportContainer = (VBox) box.getChildren().get(0);
+                for (javafx.scene.Node node : reportContainer.getChildren()) {
+                    if (node instanceof TableView) {
+                        @SuppressWarnings("unchecked")
+                        TableView<ReportItem> table = (TableView<ReportItem>) node;
+                        reportItems.addAll(table.getItems());
+                        break;
+                    }
                 }
             }
+            
+            // Eğer tablo bulunamazsa, rapor tipine göre veriyi direkt al
+            if (reportItems.isEmpty()) {
+                String type = reportType;
+                if (type.contains("Revenue by Time")) {
+                    String period = type.contains("Daily") ? "daily" : 
+                                   type.contains("Weekly") ? "weekly" : "monthly";
+                    Map<String, Double> data = OrderDAO.getRevenueByTimeReport(period);
+                    data.forEach((k, v) -> reportItems.add(new ReportItem(k, String.format("%.2f TL", v))));
+                } else if (type.equals("Revenue by Amount Range")) {
+                    Map<String, Double> data = OrderDAO.getRevenueByAmountRange();
+                    data.forEach((k, v) -> reportItems.add(new ReportItem(k, String.format("%.2f TL", v))));
+                } else if (type.equals("Product Revenue")) {
+                    Map<String, Double> map = OrderDAO.getRevenueByProductReport();
+                    map.forEach((k, v) -> reportItems.add(new ReportItem(k, String.format("%.2f TL", v))));
+                } else if (type.equals("Carrier Performance")) {
+                    Map<String, Integer> map = OrderDAO.getCarrierPerformanceReport();
+                    map.forEach((k, v) -> reportItems.add(new ReportItem(k, String.valueOf(v))));
+                }
+            }
+            
+            if (reportItems.isEmpty()) {
+                com.itextpdf.text.Paragraph noData = new com.itextpdf.text.Paragraph("No data available for this report.");
+                noData.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
+                document.add(noData);
+            } else {
+                // PDF Tablosu oluştur
+                com.itextpdf.text.pdf.PdfPTable pdfTable = new com.itextpdf.text.pdf.PdfPTable(2);
+                pdfTable.setWidthPercentage(100);
+                pdfTable.setWidths(new float[]{3, 2});
+                
+                // Başlık satırı
+                com.itextpdf.text.Font headerFont = com.itextpdf.text.FontFactory.getFont(
+                    com.itextpdf.text.FontFactory.HELVETICA_BOLD, 12, com.itextpdf.text.BaseColor.WHITE);
+                com.itextpdf.text.pdf.PdfPCell headerCell1 = new com.itextpdf.text.pdf.PdfPCell(
+                    new com.itextpdf.text.Phrase("Item", headerFont));
+                headerCell1.setBackgroundColor(com.itextpdf.text.BaseColor.DARK_GRAY);
+                pdfTable.addCell(headerCell1);
+                
+                com.itextpdf.text.pdf.PdfPCell headerCell2 = new com.itextpdf.text.pdf.PdfPCell(
+                    new com.itextpdf.text.Phrase("Value", headerFont));
+                headerCell2.setBackgroundColor(com.itextpdf.text.BaseColor.DARK_GRAY);
+                pdfTable.addCell(headerCell2);
+                
+                // Veri satırları
+                com.itextpdf.text.Font dataFont = com.itextpdf.text.FontFactory.getFont(
+                    com.itextpdf.text.FontFactory.HELVETICA, 11, com.itextpdf.text.BaseColor.BLACK);
+                boolean alternate = false;
+                for (ReportItem item : reportItems) {
+                    com.itextpdf.text.BaseColor rowColor = alternate ? 
+                        com.itextpdf.text.BaseColor.WHITE : 
+                        new com.itextpdf.text.BaseColor(245, 245, 245);
+                    alternate = !alternate;
+                    
+                    com.itextpdf.text.pdf.PdfPCell cell1 = new com.itextpdf.text.pdf.PdfPCell(
+                        new com.itextpdf.text.Phrase(item.getKey(), dataFont));
+                    cell1.setBackgroundColor(rowColor);
+                    pdfTable.addCell(cell1);
+                    
+                    com.itextpdf.text.pdf.PdfPCell cell2 = new com.itextpdf.text.pdf.PdfPCell(
+                        new com.itextpdf.text.Phrase(item.getValue(), dataFont));
+                    cell2.setBackgroundColor(rowColor);
+                    pdfTable.addCell(cell2);
+                }
+                
+                document.add(pdfTable);
+            }
 
-            writer.println("");
-            writer.println("--------------------------------");
-            writer.println("End of Report");
+            document.add(new com.itextpdf.text.Paragraph(" "));
+            document.add(new com.itextpdf.text.Paragraph("--------------------------------"));
+            
+            // Footer
+            com.itextpdf.text.Font footerFont = com.itextpdf.text.FontFactory.getFont(
+                com.itextpdf.text.FontFactory.HELVETICA, 10, com.itextpdf.text.BaseColor.GRAY);
+            com.itextpdf.text.Paragraph footer = new com.itextpdf.text.Paragraph(
+                "This report was generated electronically.", footerFont);
+            footer.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
+            document.add(footer);
 
-            showAlert("Success", "Report saved to: " + file.getAbsolutePath());
+            document.close();
+            showAlert("Success", "Report saved as PDF to: " + file.getAbsolutePath());
 
         } catch (Exception e) {
-            showAlert("Error", "Could not save file: " + e.getMessage());
+            showAlert("Error", "Could not save PDF file: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
