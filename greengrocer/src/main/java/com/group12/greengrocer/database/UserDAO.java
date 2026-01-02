@@ -278,4 +278,31 @@ public class UserDAO {
         } catch (SQLException e) { e.printStackTrace(); }
         return 0; 
     }
+
+    /**
+     * Tüm müşterileri getir
+     */
+    public static List<User> getAllCustomers() {
+        List<User> customers = new ArrayList<>();
+        String sql = "SELECT * FROM users WHERE role = 'customer'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                customers.add(new User(
+                    rs.getInt("id"),
+                    rs.getString("username"),
+                    rs.getString("password"),
+                    "customer",
+                    rs.getString("address"),
+                    rs.getString("email"),
+                    rs.getString("phone_number"),
+                    rs.getString("neighborhood")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return customers;
+    }
 }

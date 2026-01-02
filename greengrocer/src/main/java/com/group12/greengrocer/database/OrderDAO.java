@@ -377,6 +377,197 @@ public class OrderDAO {
         return data;
     }
 
+    // --- EN ÇOK SATILAN ÜRÜNLER (MİKTAR BAZLI) ---
+    public static Map<String, Double> getMostSoldProducts(int limit) {
+        Map<String, Double> data = new HashMap<>();
+        String sql = "SELECT p.name, SUM(oi.quantity) as total_quantity " +
+                     "FROM order_items oi " +
+                     "JOIN products p ON oi.product_id = p.id " +
+                     "JOIN orders o ON oi.order_id = o.id " +
+                     "WHERE o.status = 'completed' " +
+                     "GROUP BY p.name " +
+                     "ORDER BY total_quantity DESC " +
+                     "LIMIT ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    data.put(rs.getString("name"), rs.getDouble("total_quantity"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- EN AKTİF MÜŞTERİLER ---
+    public static Map<String, Integer> getMostActiveCustomers(int limit) {
+        Map<String, Integer> data = new HashMap<>();
+        String sql = "SELECT u.username, COUNT(o.id) as order_count " +
+                     "FROM orders o " +
+                     "JOIN users u ON o.user_id = u.id " +
+                     "WHERE o.status = 'completed' " +
+                     "GROUP BY u.username " +
+                     "ORDER BY order_count DESC " +
+                     "LIMIT ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    data.put(rs.getString("username"), rs.getInt("order_count"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- SİPARİŞ YOĞUNLUĞU (SAAT BAZLI) ---
+    public static Map<String, Integer> getOrderIntensityByHour() {
+        Map<String, Integer> data = new HashMap<>();
+        String sql = "SELECT HOUR(order_time) as hour, COUNT(*) as order_count " +
+                     "FROM orders " +
+                     "WHERE status = 'completed' " +
+                     "GROUP BY HOUR(order_time) " +
+                     "ORDER BY hour";
+        try (Connection conn = DatabaseConnection.getConnection();
+             ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                int hour = rs.getInt("hour");
+                data.put(String.format("%02d:00", hour), rs.getInt("order_count"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- SİPARİŞ YOĞUNLUĞU (GÜN BAZLI) ---
+    public static Map<String, Integer> getOrderIntensityByDay() {
+        Map<String, Integer> data = new HashMap<>();
+        String sql = "SELECT DAYNAME(order_time) as day_name, COUNT(*) as order_count " +
+                     "FROM orders " +
+                     "WHERE status = 'completed' " +
+                     "GROUP BY DAYNAME(order_time) " +
+                     "ORDER BY FIELD(DAYNAME(order_time), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
+        try (Connection conn = DatabaseConnection.getConnection();
+             ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("day_name"), rs.getInt("order_count"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- CARRIER ORTALAMA PERFORMANSI (RATING BAZLI) ---
+    public static Map<String, Double> getCarrierAverageRatings() {
+        Map<String, Double> data = new HashMap<>();
+        String sql = "SELECT u.username, AVG(cr.rating) as avg_rating " +
+                     "FROM carrier_ratings cr " +
+                     "JOIN users u ON cr.carrier_id = u.id " +
+                     "GROUP BY u.username " +
+                     "ORDER BY avg_rating DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("username"), rs.getDouble("avg_rating"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- KATEGORİ BAZLI GELİR (VEGETABLE vs FRUIT) ---
+    public static Map<String, Double> getRevenueByCategory() {
+        Map<String, Double> data = new HashMap<>();
+        String sql = "SELECT p.type, SUM(oi.total_price) as total_revenue " +
+                     "FROM order_items oi " +
+                     "JOIN products p ON oi.product_id = p.id " +
+                     "JOIN orders o ON oi.order_id = o.id " +
+                     "WHERE o.status = 'completed' " +
+                     "GROUP BY p.type";
+        try (Connection conn = DatabaseConnection.getConnection();
+             ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("type"), rs.getDouble("total_revenue"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- ZAMAN BAZLI RAPORLAR ---
+    public static Map<String, Double> getRevenueByTimeReport(String period) {
+        Map<String, Double> data = new HashMap<>();
+        String sql;
+        
+        switch (period.toLowerCase()) {
+            case "daily":
+                sql = "SELECT DATE(order_time) as period, SUM(total_cost) as revenue " +
+                      "FROM orders WHERE status = 'completed' " +
+                      "GROUP BY DATE(order_time) ORDER BY period DESC LIMIT 30";
+                break;
+            case "weekly":
+                sql = "SELECT YEARWEEK(order_time) as period, SUM(total_cost) as revenue " +
+                      "FROM orders WHERE status = 'completed' " +
+                      "GROUP BY YEARWEEK(order_time) ORDER BY period DESC LIMIT 12";
+                break;
+            case "monthly":
+                sql = "SELECT DATE_FORMAT(order_time, '%Y-%m') as period, SUM(total_cost) as revenue " +
+                      "FROM orders WHERE status = 'completed' " +
+                      "GROUP BY DATE_FORMAT(order_time, '%Y-%m') ORDER BY period DESC LIMIT 12";
+                break;
+            default:
+                sql = "SELECT DATE(order_time) as period, SUM(total_cost) as revenue " +
+                      "FROM orders WHERE status = 'completed' " +
+                      "GROUP BY DATE(order_time) ORDER BY period DESC LIMIT 30";
+        }
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+                ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("period"), rs.getDouble("revenue"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+    // --- PARA BAZLI RAPORLAR ---
+    public static Map<String, Double> getRevenueByAmountRange() {
+        Map<String, Double> data = new HashMap<>();
+        String sql = "SELECT " +
+                      "CASE " +
+                      "  WHEN total_cost < 100 THEN '0-100 TL' " +
+                      "  WHEN total_cost < 200 THEN '100-200 TL' " +
+                      "  WHEN total_cost < 300 THEN '200-300 TL' " +
+                      "  WHEN total_cost < 500 THEN '300-500 TL' " +
+                      "  ELSE '500+ TL' " +
+                      "END as range, " +
+                      "SUM(total_cost) as revenue " +
+                      "FROM orders WHERE status = 'completed' " +
+                      "GROUP BY range ORDER BY revenue DESC";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+                ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("range"), rs.getDouble("revenue"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
     // --- MÜŞTERİ GEÇMİŞİ ---
     public static List<Order> getOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();

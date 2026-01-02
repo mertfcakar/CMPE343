@@ -34,29 +34,73 @@
                         <ScrollPane fitToWidth="true" fitToHeight="true">
                             <VBox spacing="20" style="-fx-padding: 20;">
                                 
-                                <!-- Statistics Cards -->
+                                <!-- KPI Cards - Modern Design -->
                                 <HBox spacing="15">
-                                    <VBox spacing="5" style="-fx-background-color: #e3f2fd; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-                                        <Label text="Total Products" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                                        <Label fx:id="totalProductsLabel" text="30" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1976d2;"/>
+                                    <VBox spacing="5" style="-fx-background-color: linear-gradient(to bottom, #2196f3, #1976d2); -fx-padding: 20; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                        <Label text="📦 Total Products" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-opacity: 0.9;"/>
+                                        <Label fx:id="totalProductsLabel" text="30" style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: white;"/>
                                     </VBox>
-                                    <VBox spacing="5" style="-fx-background-color: #e8f5e9; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-                                        <Label text="Active Orders" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                                        <Label fx:id="activeOrdersLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #388e3c;"/>
+                                    <VBox spacing="5" style="-fx-background-color: linear-gradient(to bottom, #4caf50, #388e3c); -fx-padding: 20; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                        <Label text="📋 Active Orders" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-opacity: 0.9;"/>
+                                        <Label fx:id="activeOrdersLabel" text="0" style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: white;"/>
                                     </VBox>
-                                    <VBox spacing="5" style="-fx-background-color: #fff3e0; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-                                        <Label text="Total Revenue" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                                        <Label fx:id="totalRevenueLabel" text="TL 0.00" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #f57c00;"/>
+                                    <VBox spacing="5" style="-fx-background-color: linear-gradient(to bottom, #ff9800, #f57c00); -fx-padding: 20; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                        <Label text="💰 Total Revenue" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-opacity: 0.9;"/>
+                                        <Label fx:id="totalRevenueLabel" text="₺0.00" style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: white;"/>
                                     </VBox>
-                                    <VBox spacing="5" style="-fx-background-color: #fce4ec; -fx-padding: 15; -fx-border-radius: 5; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-                                        <Label text="Active Carriers" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                                        <Label fx:id="activeCarriersLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #c2185b;"/>
+                                    <VBox spacing="5" style="-fx-background-color: linear-gradient(to bottom, #9c27b0, #7b1fa2); -fx-padding: 20; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                        <Label text="🚚 Active Carriers" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-opacity: 0.9;"/>
+                                        <Label fx:id="activeCarriersLabel" text="0" style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+                                    </VBox>
+                                </HBox>
+                                
+                                <!-- Charts Section -->
+                                <HBox spacing="15">
+                                    <!-- Left Column -->
+                                    <VBox spacing="15" HBox.hgrow="ALWAYS">
+                                        <!-- Most Sold Products Chart -->
+                                        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                            <Label text="📊 En Çok Satılan Ürünler (Top 10)" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                            <Separator/>
+                                            <VBox fx:id="mostSoldProductsChart" prefHeight="250" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
+                                        
+                                        <!-- Revenue by Category Chart -->
+                                        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                            <Label text="💰 Kategori Bazlı Gelir" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                            <Separator/>
+                                            <VBox fx:id="revenueByCategoryChart" prefHeight="200" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
+                                    </VBox>
+                                    
+                                    <!-- Right Column -->
+                                    <VBox spacing="15" HBox.hgrow="ALWAYS">
+                                        <!-- Carrier Performance Chart -->
+                                        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                            <Label text="🚚 Carrier Performans Sıralaması" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                            <Separator/>
+                                            <VBox fx:id="carrierPerformanceChart" prefHeight="200" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
+                                        
+                                        <!-- Order Intensity by Hour Chart -->
+                                        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                            <Label text="⏰ Sipariş Yoğunluğu (Saat Bazlı)" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                            <Separator/>
+                                            <VBox fx:id="orderIntensityHourChart" prefHeight="200" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
+                                        
+                                        <!-- Most Active Customers Chart -->
+                                        <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                            <Label text="👥 En Aktif Müşteriler (Top 10)" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                            <Separator/>
+                                            <VBox fx:id="mostActiveCustomersChart" prefHeight="200" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
                                     </VBox>
                                 </HBox>
                                 
                                 <!-- Recent Activity -->
-                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
-                                    <Label text="Recent Orders" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+                                    <Label text="📋 Recent Orders" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                                     <Separator/>
                                     <TableView fx:id="recentOrdersTable" prefHeight="200">
                                         <columns>
@@ -87,16 +131,21 @@
                                 </HBox>
                             </top>
                             <center>
-                                <TableView fx:id="productsTable">
+                                <TableView fx:id="productsTable" style="-fx-background-color: white;">
                                     <columns>
-                                        <TableColumn text="ID" prefWidth="50"/>
+                                        <TableColumn text="ID" prefWidth="50">
+                                            <style>
+                                                -fx-background-color: #f5f5f5;
+                                                -fx-font-weight: bold;
+                                            </style>
+                                        </TableColumn>
                                         <TableColumn text="Name" prefWidth="150"/>
                                         <TableColumn text="Type" prefWidth="100"/>
-                                        <TableColumn text="Price" prefWidth="80"/>
-                                        <TableColumn text="Stock" prefWidth="80"/>
-                                        <TableColumn text="Threshold" prefWidth="80"/>
-                                        <TableColumn text="Current Price" prefWidth="100"/>
-                                        <TableColumn text="Status" prefWidth="100"/>
+                                        <TableColumn text="Base Price" prefWidth="100"/>
+                                        <TableColumn text="Stock (kg)" prefWidth="100"/>
+                                        <TableColumn text="Threshold" prefWidth="100"/>
+                                        <TableColumn text="Current Price" prefWidth="120"/>
+                                        <TableColumn text="Status" prefWidth="120"/>
                                     </columns>
                                 </TableView>
                             </center>
@@ -161,36 +210,56 @@
                     
                     <!-- Messages Tab -->
                     <Tab text="Messages">
-                        <BorderPane>
-                            <left>
-                                <VBox spacing="10" style="-fx-padding: 15; -fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;" prefWidth="250">
-                                    <Label text="Customer Messages" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-                                    <Separator/>
-                                    <ListView fx:id="messagesListView" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Refresh" onAction="#handleRefreshMessages" maxWidth="Infinity"/>
-                                </VBox>
-                            </left>
-                            <center>
-                                <VBox spacing="10" style="-fx-padding: 15;">
-                                    <Label text="Message Details" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-                                    <Separator/>
-                                    <GridPane hgap="10" vgap="10">
-                                        <Label text="From:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
-                                        <Label fx:id="messageFromLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                                        <Label text="Subject:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
-                                        <Label fx:id="messageSubjectLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                                        <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
-                                        <Label fx:id="messageDateLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                                    </GridPane>
-                                    <Separator/>
-                                    <TextArea fx:id="messageContentArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
-                                    <HBox spacing="10">
-                                        <Button text="Reply" onAction="#handleReplyMessage" style="-fx-background-color: #2196f3; -fx-text-fill: white;"/>
-                                        <Button text="Delete" onAction="#handleDeleteMessage"/>
-                                    </HBox>
-                                </VBox>
-                            </center>
-                        </BorderPane>
+                        <HBox spacing="0" style="-fx-background-color: white; -fx-background-radius: 15;">
+                            <!-- SOL MENÜ: KONULAR -->
+                            <VBox minWidth="300" spacing="0"
+                                style="-fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0; -fx-background-color: #ffffff; -fx-background-radius: 15 0 0 15;">
+                                <HBox alignment="CENTER_LEFT"
+                                    style="-fx-padding: 20; -fx-background-color: #f0f2f5; -fx-background-radius: 15 0 0 0; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;">
+                                    <Label style="-fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #333;"
+                                        text="💬 Customer Messages" />
+                                </HBox>
+                                <Button onAction="#handleRefreshMessages" maxWidth="Infinity" text="🔄 Refresh"
+                                    style="-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 12; -fx-background-radius: 0;" />
+                                <ListView fx:id="chatTopicsList" VBox.vgrow="ALWAYS"
+                                    style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0; -fx-font-size: 13px;" />
+                            </VBox>
+
+                            <!-- SAĞ İÇERİK: MESAJLAŞMA -->
+                            <VBox HBox.hgrow="ALWAYS"
+                                style="-fx-background-color: #efe7dd; -fx-background-radius: 0 15 15 0;">
+                                <HBox alignment="CENTER_LEFT" spacing="15"
+                                    style="-fx-background-color: #f0f2f5; -fx-padding: 15; -fx-background-radius: 0 15 0 0; -fx-border-color: #d1d7db; -fx-border-width: 0 0 1 0;">
+                                    <VBox>
+                                        <Label fx:id="chatCurrentTopicLabel" text="Select a conversation"
+                                            style="-fx-text-fill: #111; -fx-font-weight: bold; -fx-font-size: 16px;" />
+                                        <Label fx:id="chatCustomerNameLabel" text="Customer Name"
+                                            style="-fx-text-fill: #777; -fx-font-size: 11px;" />
+                                    </VBox>
+                                    <Region HBox.hgrow="ALWAYS" />
+                                    <Button onAction="#handleDeleteMessage" text="🗑 Delete"
+                                        style="-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-size: 12px; -fx-cursor: hand; -fx-background-radius: 5;" />
+                                </HBox>
+
+                                <!-- Chat Alanı -->
+                                <ScrollPane fx:id="chatScroll" fitToWidth="true" fitToHeight="true"
+                                    style="-fx-background: #efe7dd; -fx-background-color: #efe7dd; -fx-border-width: 0; -fx-padding: 0;"
+                                    VBox.vgrow="ALWAYS">
+                                    <content>
+                                        <VBox fx:id="chatMessagesBox" spacing="15"
+                                            style="-fx-padding: 20; -fx-background-color: #efe7dd;" />
+                                    </content>
+                                </ScrollPane>
+
+                                <HBox spacing="10"
+                                    style="-fx-background-color: #f0f2f5; -fx-padding: 15; -fx-background-radius: 0 0 15 0;">
+                                    <TextField fx:id="chatInput" promptText="Type your message..." HBox.hgrow="ALWAYS"
+                                        style="-fx-background-radius: 20; -fx-padding: 10;" />
+                                    <Button onAction="#handleSendMessage" text="Send"
+                                        style="-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-padding: 10 20;" />
+                                </HBox>
+                            </VBox>
+                        </HBox>
                     </Tab>
                     
                     <!-- Settings Tab -->
@@ -199,11 +268,13 @@
                             <VBox spacing="20" style="-fx-padding: 20;">
                                 
                                 <!-- Coupons Section -->
-                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
                                     <HBox alignment="CENTER_LEFT" spacing="10">
                                         <Label text="Discount Coupons" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                                         <Region HBox.hgrow="ALWAYS"/>
-                                        <Button text="Add Coupon" onAction="#handleAddCoupon" style="-fx-background-color: #4caf50; -fx-text-fill: white;"/>
+                                        <Button text="Add Coupon" onAction="#handleAddCoupon" style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                                        <Button text="Update Coupon" onAction="#handleUpdateCoupon" style="-fx-background-color: #2196f3; -fx-text-fill: white;"/>
+                                        <Button text="Remove Coupon" onAction="#handleRemoveCoupon" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
                                     </HBox>
                                     <Separator/>
                                     <TableView fx:id="couponsTable" prefHeight="200">
@@ -218,7 +289,7 @@
                                 </VBox>
                                 
                                 <!-- Loyalty Program Section -->
-                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
                                     <Label text="Loyalty Program Settings" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                                     <Separator/>
                                     <GridPane hgap="15" vgap="10">
@@ -229,11 +300,11 @@
                                         <Label text="percent" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
                                     </GridPane>
                                     <Button text="Save Loyalty Settings" onAction="#handleSaveLoyaltySettings" 
-                                            style="-fx-background-color: #2196f3; -fx-text-fill: white;" maxWidth="200"/>
+                                            style="-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: bold;" maxWidth="200"/>
                                 </VBox>
                                 
                                 <!-- System Settings Section -->
-                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
                                     <Label text="System Settings" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                                     <Separator/>
                                     <GridPane hgap="15" vgap="10">
@@ -244,6 +315,8 @@
                                         <TextField fx:id="vatRateField" text="18" prefWidth="100" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                                         <Label text="percent" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
                                     </GridPane>
+                                    <Button text="Save Min Cart Value" onAction="#handleSaveMinCartValue" 
+                                            style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-weight: bold;" maxWidth="200"/>
                                 </VBox>
                                 
                             </VBox>

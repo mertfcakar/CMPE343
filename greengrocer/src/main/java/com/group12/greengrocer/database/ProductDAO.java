@@ -129,4 +129,36 @@ public class ProductDAO {
             return false;
         }
     }
+
+    // ÜRÜN TAM GÜNCELLEME (Name, Type, Price, Stock, Threshold, Image)
+    public static boolean updateProduct(int id, String name, String type, double price, double stock, double threshold, File imageFile) {
+        String sql;
+        if (imageFile != null) {
+            sql = "UPDATE products SET name = ?, type = ?, price = ?, stock = ?, threshold = ?, image = ? WHERE id = ?";
+        } else {
+            sql = "UPDATE products SET name = ?, type = ?, price = ?, stock = ?, threshold = ? WHERE id = ?";
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setString(2, type);
+            ps.setDouble(3, price);
+            ps.setDouble(4, stock);
+            ps.setDouble(5, threshold);
+            
+            if (imageFile != null) {
+                FileInputStream fis = new FileInputStream(imageFile);
+                ps.setBinaryStream(6, fis, (int) imageFile.length());
+                ps.setInt(7, id);
+            } else {
+                ps.setInt(6, id);
+            }
+            
+            return ps.executeUpdate() > 0;
+        } catch (SQLException | FileNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

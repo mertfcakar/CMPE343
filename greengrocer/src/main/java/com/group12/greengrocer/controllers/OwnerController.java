@@ -42,10 +42,23 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.geometry.Pos;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.chart.PieChart;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.TableCell;
 
 public class OwnerController {
 
@@ -86,17 +99,22 @@ public class OwnerController {
     @FXML
     private TableView<User> carriersTable;
 
-    // --- MESSAGES ---
+    // --- MESSAGES (GELİŞMİŞ CHAT) ---
     @FXML
-    private ListView<Message> messagesListView;
+    private ListView<String> chatTopicsList; // Konu başlıkları
     @FXML
-    private Label messageFromLabel;
+    private VBox chatMessagesBox; // Mesaj balonları
     @FXML
-    private Label messageSubjectLabel;
+    private ScrollPane chatScroll; // Scroll pane
     @FXML
-    private Label messageDateLabel;
+    private TextField chatInput; // Mesaj girişi
     @FXML
-    private TextArea messageContentArea;
+    private Label chatCurrentTopicLabel; // Seçili konu
+    @FXML
+    private Label chatCustomerNameLabel; // Müşteri adı
+    
+    private String currentChatSubject = null;
+    private int currentChatCustomerId = 0;
 
     // --- SETTINGS (COUPONS & LOYALTY) ---
     @FXML
@@ -115,6 +133,18 @@ public class OwnerController {
     private ComboBox<String> reportTypeCombo;
     @FXML
     private VBox reportContentBox;
+
+    // --- DASHBOARD CHARTS ---
+    @FXML
+    private VBox mostSoldProductsChart;
+    @FXML
+    private VBox carrierPerformanceChart;
+    @FXML
+    private VBox orderIntensityHourChart;
+    @FXML
+    private VBox mostActiveCustomersChart;
+    @FXML
+    private VBox revenueByCategoryChart;
 
     private ObservableList<Product> masterProductList = FXCollections.observableArrayList();
     private ObservableList<Order> masterOrderList = FXCollections.observableArrayList();
@@ -141,15 +171,17 @@ public class OwnerController {
 
         // Rapor Tipleri
         if (reportTypeCombo != null) {
-            reportTypeCombo.getItems().addAll("Product Revenue", "Carrier Performance");
+            reportTypeCombo.getItems().addAll("Product Revenue", "Carrier Performance", 
+                "Revenue by Time (Daily)", "Revenue by Time (Weekly)", "Revenue by Time (Monthly)", 
+                "Revenue by Amount Range");
             reportTypeCombo.getSelectionModel().selectFirst();
         }
 
-        // Mesaj Listesi Seçim Listener
-        if (messagesListView != null) {
-            messagesListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+        // Chat Konu Listesi Seçim Listener
+        if (chatTopicsList != null) {
+            chatTopicsList.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal != null)
-                    displayMessageDetails(newVal);
+                    loadChatMessages(newVal);
             });
         }
     }
@@ -167,30 +199,170 @@ public class OwnerController {
 
     // --- DASHBOARD ---
     private void loadDashboardStats() {
-        int prodCount = ProductDAO.getAllProducts().size();
-        int activeOrders = OrderDAO.getActiveOrderCount();
-        double revenue = OrderDAO.getTotalRevenue();
-        int carrierCount = UserDAO.getAllCarriers().size();
+        try {
+            int prodCount = ProductDAO.getAllProducts().size();
+            int activeOrders = OrderDAO.getActiveOrderCount();
+            double revenue = OrderDAO.getTotalRevenue();
+            int carrierCount = UserDAO.getAllCarriers().size();
 
-        if (totalProductsLabel != null)
-            totalProductsLabel.setText(String.valueOf(prodCount));
-        if (activeOrdersLabel != null)
-            activeOrdersLabel.setText(String.valueOf(activeOrders));
-        if (totalRevenueLabel != null)
-            totalRevenueLabel.setText(String.format("₺%.2f", revenue));
-        if (activeCarriersLabel != null)
-            activeCarriersLabel.setText(String.valueOf(carrierCount));
+            if (totalProductsLabel != null)
+                totalProductsLabel.setText(String.valueOf(prodCount));
+            if (activeOrdersLabel != null)
+                activeOrdersLabel.setText(String.valueOf(activeOrders));
+            if (totalRevenueLabel != null)
+                totalRevenueLabel.setText(String.format("₺%.2f", revenue));
+            if (activeCarriersLabel != null)
+                activeCarriersLabel.setText(String.valueOf(carrierCount));
 
-        List<Order> allOrders = OrderDAO.getAllOrdersForAdmin();
-        ObservableList<Order> recent = FXCollections.observableArrayList();
-        if (allOrders.size() > 5)
-            recent.addAll(allOrders.subList(0, 5));
-        else
-            recent.addAll(allOrders);
+            List<Order> allOrders = OrderDAO.getAllOrdersForAdmin();
+            ObservableList<Order> recent = FXCollections.observableArrayList();
+            if (allOrders.size() > 5)
+                recent.addAll(allOrders.subList(0, 5));
+            else
+                recent.addAll(allOrders);
 
-        if (recentOrdersTable != null) {
-            setupRecentOrdersTable();
-            recentOrdersTable.setItems(recent);
+            if (recentOrdersTable != null) {
+                setupRecentOrdersTable();
+                recentOrdersTable.setItems(recent);
+            }
+            
+            // Load charts
+            loadDashboardCharts();
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load dashboard stats: " + e.getMessage());
+        }
+    }
+
+    private void loadDashboardCharts() {
+        try {
+            // Most Sold Products Chart
+            if (mostSoldProductsChart != null) {
+                mostSoldProductsChart.getChildren().clear();
+                Map<String, Double> data = OrderDAO.getMostSoldProducts(10);
+                if (!data.isEmpty()) {
+                    CategoryAxis xAxis = new CategoryAxis();
+                    NumberAxis yAxis = new NumberAxis();
+                    yAxis.setLabel("Quantity (kg)");
+                    BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+                    chart.setTitle("Top 10 Most Sold Products");
+                    chart.setLegendVisible(false);
+                    chart.setPrefHeight(250);
+                    
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    data.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                    chart.getData().add(series);
+                    mostSoldProductsChart.getChildren().add(chart);
+                } else {
+                    Label noData = new Label("No data available");
+                    noData.setStyle("-fx-text-fill: #666; -fx-padding: 20;");
+                    mostSoldProductsChart.getChildren().add(noData);
+                }
+            }
+            
+            // Carrier Performance Chart
+            if (carrierPerformanceChart != null) {
+                carrierPerformanceChart.getChildren().clear();
+                Map<String, Double> ratings = OrderDAO.getCarrierAverageRatings();
+                Map<String, Integer> deliveries = OrderDAO.getCarrierPerformanceReport();
+                
+                if (!ratings.isEmpty() || !deliveries.isEmpty()) {
+                    CategoryAxis xAxis = new CategoryAxis();
+                    NumberAxis yAxis = new NumberAxis();
+                    yAxis.setLabel("Rating / Deliveries");
+                    BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+                    chart.setTitle("Carrier Performance");
+                    chart.setPrefHeight(200);
+                    
+                    if (!ratings.isEmpty()) {
+                        XYChart.Series<String, Number> ratingSeries = new XYChart.Series<>();
+                        ratingSeries.setName("Avg Rating");
+                        ratings.forEach((k, v) -> ratingSeries.getData().add(new XYChart.Data<>(k, v)));
+                        chart.getData().add(ratingSeries);
+                    }
+                    
+                    if (!deliveries.isEmpty()) {
+                        XYChart.Series<String, Number> deliverySeries = new XYChart.Series<>();
+                        deliverySeries.setName("Deliveries");
+                        deliveries.forEach((k, v) -> deliverySeries.getData().add(new XYChart.Data<>(k, v.doubleValue())));
+                        chart.getData().add(deliverySeries);
+                    }
+                    
+                    carrierPerformanceChart.getChildren().add(chart);
+                } else {
+                    Label noData = new Label("No data available");
+                    noData.setStyle("-fx-text-fill: #666; -fx-padding: 20;");
+                    carrierPerformanceChart.getChildren().add(noData);
+                }
+            }
+            
+            // Order Intensity by Hour Chart
+            if (orderIntensityHourChart != null) {
+                orderIntensityHourChart.getChildren().clear();
+                Map<String, Integer> data = OrderDAO.getOrderIntensityByHour();
+                if (!data.isEmpty()) {
+                    CategoryAxis xAxis = new CategoryAxis();
+                    NumberAxis yAxis = new NumberAxis();
+                    yAxis.setLabel("Order Count");
+                    BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+                    chart.setTitle("Order Intensity by Hour");
+                    chart.setLegendVisible(false);
+                    chart.setPrefHeight(200);
+                    
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    data.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                    chart.getData().add(series);
+                    orderIntensityHourChart.getChildren().add(chart);
+                } else {
+                    Label noData = new Label("No data available");
+                    noData.setStyle("-fx-text-fill: #666; -fx-padding: 20;");
+                    orderIntensityHourChart.getChildren().add(noData);
+                }
+            }
+            
+            // Most Active Customers Chart
+            if (mostActiveCustomersChart != null) {
+                mostActiveCustomersChart.getChildren().clear();
+                Map<String, Integer> data = OrderDAO.getMostActiveCustomers(10);
+                if (!data.isEmpty()) {
+                    CategoryAxis xAxis = new CategoryAxis();
+                    NumberAxis yAxis = new NumberAxis();
+                    yAxis.setLabel("Order Count");
+                    BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+                    chart.setTitle("Top 10 Most Active Customers");
+                    chart.setLegendVisible(false);
+                    chart.setPrefHeight(200);
+                    
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    data.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                    chart.getData().add(series);
+                    mostActiveCustomersChart.getChildren().add(chart);
+                } else {
+                    Label noData = new Label("No data available");
+                    noData.setStyle("-fx-text-fill: #666; -fx-padding: 20;");
+                    mostActiveCustomersChart.getChildren().add(noData);
+                }
+            }
+            
+            // Revenue by Category Chart
+            if (revenueByCategoryChart != null) {
+                revenueByCategoryChart.getChildren().clear();
+                Map<String, Double> data = OrderDAO.getRevenueByCategory();
+                if (!data.isEmpty()) {
+                    PieChart chart = new PieChart();
+                    chart.setTitle("Revenue by Category");
+                    chart.setPrefHeight(200);
+                    data.forEach((k, v) -> chart.getData().add(new PieChart.Data(
+                        k.substring(0, 1).toUpperCase() + k.substring(1) + " (" + String.format("%.2f TL", v) + ")", v)));
+                    revenueByCategoryChart.getChildren().add(chart);
+                } else {
+                    Label noData = new Label("No data available");
+                    noData.setStyle("-fx-text-fill: #666; -fx-padding: 20;");
+                    revenueByCategoryChart.getChildren().add(noData);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Silently fail for charts - don't show alert for every chart
         }
     }
 
@@ -203,6 +375,73 @@ public class OwnerController {
             productsTable.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("price"));
             productsTable.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("stock"));
             productsTable.getColumns().get(5).setCellValueFactory(new PropertyValueFactory<>("threshold"));
+            
+            // Renklendirme için cell factory ekle
+            if (productsTable.getColumns().size() > 6) {
+                TableColumn<Product, String> priceCol = (TableColumn<Product, String>) productsTable.getColumns().get(6);
+                priceCol.setCellValueFactory(data -> {
+                    Product p = data.getValue();
+                    double currentPrice = p.getCurrentPrice();
+                    return new SimpleStringProperty(String.format("%.2f TL", currentPrice));
+                });
+                priceCol.setCellFactory(column -> {
+                    return new TableCell<Product, String>() {
+                        @Override
+                        protected void updateItem(String item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty || item == null) {
+                                setText(null);
+                                setStyle("");
+                            } else {
+                                setText(item);
+                                Product p = getTableView().getItems().get(getIndex());
+                                if (p.getStock() <= p.getThreshold()) {
+                                    setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-weight: bold;");
+                                } else {
+                                    setStyle("-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;");
+                                }
+                            }
+                        }
+                    };
+                });
+            }
+            
+            // Status column için renklendirme
+            if (productsTable.getColumns().size() > 7) {
+                TableColumn<Product, String> statusCol = (TableColumn<Product, String>) productsTable.getColumns().get(7);
+                statusCol.setCellValueFactory(data -> {
+                    Product p = data.getValue();
+                    if (p.getStock() <= p.getThreshold() && p.getStock() > 0) {
+                        return new SimpleStringProperty("⚠️ Low Stock");
+                    } else if (p.getStock() == 0) {
+                        return new SimpleStringProperty("❌ Out of Stock");
+                    } else {
+                        return new SimpleStringProperty("✅ In Stock");
+                    }
+                });
+                statusCol.setCellFactory(column -> {
+                    return new TableCell<Product, String>() {
+                        @Override
+                        protected void updateItem(String item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty || item == null) {
+                                setText(null);
+                                setStyle("");
+                            } else {
+                                setText(item);
+                                Product p = getTableView().getItems().get(getIndex());
+                                if (p.getStock() <= p.getThreshold() && p.getStock() > 0) {
+                                    setStyle("-fx-background-color: #fff3e0; -fx-text-fill: #f57c00; -fx-font-weight: bold;");
+                                } else if (p.getStock() == 0) {
+                                    setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-weight: bold;");
+                                } else {
+                                    setStyle("-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+                                }
+                            }
+                        }
+                    };
+                });
+            }
         }
     }
 
@@ -355,35 +594,159 @@ public class OwnerController {
             showAlert("Warning", "Select a product to delete.");
             return;
         }
-        if (ProductDAO.deleteProduct(selected.getId())) {
-            loadProducts();
-            loadDashboardStats();
-            showAlert("Success", "Product deleted.");
-        } else {
-            showAlert("Error", "Could not delete product.");
-        }
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Deletion");
+        confirm.setHeaderText("Delete Product");
+        confirm.setContentText("Are you sure you want to delete " + selected.getName() + "?");
+        
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    if (ProductDAO.deleteProduct(selected.getId())) {
+                        loadProducts();
+                        loadDashboardStats();
+                        showAlert("Success", "Product deleted.");
+                    } else {
+                        showAlert("Error", "Could not delete product.");
+                    }
+                } catch (Exception e) {
+                    showAlert("Error", "Error deleting product: " + e.getMessage());
+                }
+            }
+        });
     }
 
     @FXML
     private void handleUpdateProduct() {
         Product selected = productsTable.getSelectionModel().getSelectedItem();
-        if (selected == null)
+        if (selected == null) {
+            showAlert("Warning", "Please select a product to update.");
             return;
+        }
 
-        TextInputDialog dialog = new TextInputDialog(String.valueOf(selected.getPrice()));
-        dialog.setTitle("Update Price");
-        dialog.setHeaderText("Update price for " + selected.getName());
-        dialog.setContentText("New Price:");
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Update Product");
+        dialog.setHeaderText("Update product details for: " + selected.getName());
 
-        dialog.showAndWait().ifPresent(priceStr -> {
-            try {
-                double newPrice = Double.parseDouble(priceStr);
-                ProductDAO.updateProductStockAndPrice(selected.getId(), newPrice, selected.getStock());
-                loadProducts();
-            } catch (NumberFormatException e) {
-                showAlert("Error", "Invalid price format.");
+        ButtonType saveButton = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField(selected.getName());
+        ComboBox<String> typeCombo = new ComboBox<>();
+        typeCombo.getItems().addAll("vegetable", "fruit");
+        typeCombo.setValue(selected.getType());
+        TextField priceField = new TextField(String.valueOf(selected.getPrice()));
+        TextField stockField = new TextField(String.valueOf(selected.getStock()));
+        TextField thresholdField = new TextField(String.valueOf(selected.getThreshold()));
+
+        Button imgBtn = new Button("Change Image");
+        Label imgLabel = new Label("No change");
+        final File[] selectedFile = { null };
+
+        imgBtn.setOnAction(e -> {
+            FileChooser fc = new FileChooser();
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.jpg", "*.png", "*.jpeg"));
+            File f = fc.showOpenDialog(dialog.getOwner());
+            if (f != null) {
+                selectedFile[0] = f;
+                imgLabel.setText(f.getName());
             }
         });
+
+        grid.add(new Label("Name:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Type:"), 0, 1);
+        grid.add(typeCombo, 1, 1);
+        grid.add(new Label("Price:"), 0, 2);
+        grid.add(priceField, 1, 2);
+        grid.add(new Label("Stock:"), 0, 3);
+        grid.add(stockField, 1, 3);
+        grid.add(new Label("Threshold:"), 0, 4);
+        grid.add(thresholdField, 1, 4);
+        grid.add(new Label("Image:"), 0, 5);
+        grid.add(imgBtn, 1, 5);
+        grid.add(imgLabel, 2, 5);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == saveButton) {
+                try {
+                    String name = nameField.getText().trim();
+                    String type = typeCombo.getValue();
+                    double price = Double.parseDouble(priceField.getText());
+                    double stock = Double.parseDouble(stockField.getText());
+                    double threshold = Double.parseDouble(thresholdField.getText());
+
+                    // Validasyonlar
+                    if (name.isEmpty()) {
+                        showAlert("Error", "Product name cannot be empty.");
+                        return false;
+                    }
+                    if (price <= 0) {
+                        showAlert("Error", "Price must be greater than 0.");
+                        return false;
+                    }
+                    if (stock < 0) {
+                        showAlert("Error", "Stock cannot be negative.");
+                        return false;
+                    }
+                    if (threshold <= 0) {
+                        showAlert("Error", "Threshold must be greater than 0.");
+                        return false;
+                    }
+                    if (type == null) {
+                        showAlert("Error", "Please select a product type.");
+                        return false;
+                    }
+
+                    // Aynı isim ve tip kontrolü (kendi ID'si hariç)
+                    if (!name.equals(selected.getName()) || !type.equals(selected.getType())) {
+                        if (ProductDAO.productExists(name, type)) {
+                            showAlert("Error", "A product with this name and type already exists.");
+                            return false;
+                        }
+                    }
+
+                    boolean success = ProductDAO.updateProduct(
+                            selected.getId(),
+                            name,
+                            type,
+                            price,
+                            stock,
+                            threshold,
+                            selectedFile[0]);
+
+                    if (success) {
+                        loadProducts();
+                        loadDashboardStats();
+                        return true;
+                    } else {
+                        showAlert("Error", "Failed to update product.");
+                        return false;
+                    }
+
+                } catch (NumberFormatException e) {
+                    showAlert("Error", "Please enter valid numeric values for price, stock, and threshold.");
+                    return false;
+                } catch (Exception e) {
+                    showAlert("Error", "Unexpected error: " + e.getMessage());
+                    return false;
+                }
+            }
+            return null;
+        });
+
+        Optional<Boolean> result = dialog.showAndWait();
+        if (result.isPresent() && result.get()) {
+            showAlert("Success", "Product updated successfully.");
+        }
     }
 
     // --- ORDERS ---
@@ -394,7 +757,39 @@ public class OwnerController {
             ordersTable.getColumns().get(2).setCellValueFactory(new PropertyValueFactory<>("carrierId"));
             ordersTable.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("deliveryNeighborhood"));
             ordersTable.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("totalCost"));
-            ordersTable.getColumns().get(5).setCellValueFactory(new PropertyValueFactory<>("status"));
+            
+            // Status column için renklendirme
+            if (ordersTable.getColumns().size() > 5) {
+                TableColumn<Order, String> statusCol = (TableColumn<Order, String>) ordersTable.getColumns().get(5);
+                statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+                statusCol.setCellFactory(column -> {
+                    return new TableCell<Order, String>() {
+                        @Override
+                        protected void updateItem(String item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty || item == null) {
+                                setText(null);
+                                setStyle("");
+                            } else {
+                                setText(item);
+                                String status = item.toLowerCase();
+                                if (status.contains("pending")) {
+                                    setStyle("-fx-background-color: #fff3e0; -fx-text-fill: #f57c00; -fx-font-weight: bold;");
+                                } else if (status.contains("assigned")) {
+                                    setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1976d2; -fx-font-weight: bold;");
+                                } else if (status.contains("completed")) {
+                                    setStyle("-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
+                                } else if (status.contains("cancelled")) {
+                                    setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-weight: bold;");
+                                } else {
+                                    setStyle("-fx-background-color: #f5f5f5; -fx-text-fill: #666;");
+                                }
+                            }
+                        }
+                    };
+                });
+            }
+            
             ordersTable.getColumns().get(6).setCellValueFactory(new PropertyValueFactory<>("orderTime"));
             ordersTable.getColumns().get(7).setCellValueFactory(new PropertyValueFactory<>("deliveryTime"));
         }
@@ -543,7 +938,7 @@ public class OwnerController {
         }
     }
 
-    // --- CARRIER RATINGS (NEW) ---
+    // --- CARRIER RATINGS (DETAYLI) ---
     @FXML
     private void handleViewCarrierRatings() {
         User selected = carriersTable.getSelectionModel().getSelectedItem();
@@ -552,33 +947,198 @@ public class OwnerController {
             return;
         }
 
-        Map<String, Integer> performance = OrderDAO.getCarrierPerformanceReport();
-        int completedDeliveries = performance.getOrDefault(selected.getUsername(), 0);
+        try {
+            List<OrderDAO.CarrierRating> ratings = OrderDAO.getCarrierRatings(selected.getId());
+            double avgRating = OrderDAO.getCarrierAverageRating(selected.getId());
+            Map<String, Integer> performance = OrderDAO.getCarrierPerformanceReport();
+            int completedDeliveries = performance.getOrDefault(selected.getUsername(), 0);
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Carrier Performance");
-        alert.setHeaderText("Performance for: " + selected.getUsername());
-        alert.setContentText("Total Completed Deliveries: " + completedDeliveries
-                + "\n\n(Customer rating system integration coming in v2.0)");
-        alert.showAndWait();
-    }
+            Dialog<Void> dialog = new Dialog<>();
+            dialog.setTitle("Carrier Ratings & Performance");
+            dialog.setHeaderText("Detailed Performance: " + selected.getUsername());
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
 
-    // --- MESSAGES ---
-    private void loadMessages() {
-        if (messagesListView != null) {
-            messagesListView.setItems(FXCollections.observableArrayList(MessageDAO.getAllMessages()));
+            VBox content = new VBox(10);
+            content.setPadding(new Insets(20));
+
+            Label statsLabel = new Label();
+            statsLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+            statsLabel.setText(String.format("Average Rating: %.2f / 5.0\nCompleted Deliveries: %d", 
+                avgRating, completedDeliveries));
+            content.getChildren().add(statsLabel);
+
+            if (!ratings.isEmpty()) {
+                Label ratingsLabel = new Label("Recent Ratings:");
+                ratingsLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+                content.getChildren().add(ratingsLabel);
+
+                TableView<OrderDAO.CarrierRating> ratingsTable = new TableView<>();
+                TableColumn<OrderDAO.CarrierRating, Integer> orderCol = new TableColumn<>("Order ID");
+                orderCol.setCellValueFactory(data -> new SimpleIntegerProperty(data.getValue().orderId).asObject());
+                TableColumn<OrderDAO.CarrierRating, String> customerCol = new TableColumn<>("Customer");
+                customerCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().customerName));
+                TableColumn<OrderDAO.CarrierRating, Integer> ratingCol = new TableColumn<>("Rating");
+                ratingCol.setCellValueFactory(data -> new SimpleIntegerProperty(data.getValue().rating).asObject());
+                TableColumn<OrderDAO.CarrierRating, String> commentCol = new TableColumn<>("Comment");
+                commentCol.setCellValueFactory(data -> new SimpleStringProperty(
+                    data.getValue().comment != null ? data.getValue().comment : "-"));
+                
+                ratingsTable.getColumns().add(orderCol);
+                ratingsTable.getColumns().add(customerCol);
+                ratingsTable.getColumns().add(ratingCol);
+                ratingsTable.getColumns().add(commentCol);
+                ratingsTable.setItems(FXCollections.observableArrayList(ratings));
+                ratingsTable.setPrefHeight(200);
+                content.getChildren().add(ratingsTable);
+            } else {
+                Label noRatingsLabel = new Label("No ratings yet.");
+                noRatingsLabel.setStyle("-fx-text-fill: #666;");
+                content.getChildren().add(noRatingsLabel);
+            }
+
+            dialog.getDialogPane().setContent(content);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load carrier ratings: " + e.getMessage());
         }
     }
 
-    private void displayMessageDetails(Message msg) {
-        if (messageFromLabel != null)
-            messageFromLabel.setText(msg.getSenderName());
-        if (messageSubjectLabel != null)
-            messageSubjectLabel.setText(msg.getSubject());
-        if (messageDateLabel != null)
-            messageDateLabel.setText(msg.getCreatedAt().toString());
-        if (messageContentArea != null)
-            messageContentArea.setText(msg.getContent());
+    // --- MESSAGES (GELİŞMİŞ CHAT SİSTEMİ) ---
+    private void loadMessages() {
+        if (chatTopicsList == null) return;
+        
+        try {
+            List<Message> allMsgs = MessageDAO.getAllMessages();
+            chatTopicsList.getItems().clear();
+            
+            if (allMsgs.isEmpty()) {
+                chatTopicsList.getItems().add("No messages yet");
+                return;
+            }
+            
+            // Mesajları müşteri ve konuya göre grupla
+            Map<String, List<Message>> grouped = allMsgs.stream()
+                .collect(java.util.stream.Collectors.groupingBy(msg -> 
+                    msg.getSenderName() + " - " + msg.getSubject()));
+            
+            for (Map.Entry<String, List<Message>> entry : grouped.entrySet()) {
+                List<Message> msgs = entry.getValue();
+                if (!msgs.isEmpty()) {
+                    Message lastMsg = msgs.get(msgs.size() - 1);
+                    String displayText = entry.getKey();
+                    if (lastMsg.getCreatedAt() != null) {
+                        String dateStr = lastMsg.getCreatedAt().toString().substring(0, 10);
+                        displayText += " (" + dateStr + ")";
+                    }
+                    chatTopicsList.getItems().add(displayText);
+                }
+            }
+            
+            if (!chatTopicsList.getItems().isEmpty()) {
+                chatTopicsList.getSelectionModel().selectFirst();
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load messages: " + e.getMessage());
+        }
+    }
+
+    private void loadChatMessages(String selection) {
+        if (selection == null || chatMessagesBox == null) return;
+        
+        try {
+            // Seçilen satırdan müşteri adı ve konuyu ayır
+            String[] parts = selection.split(" - ");
+            if (parts.length < 2) return;
+            
+            String customerName = parts[0];
+            String subject = parts[1];
+            if (subject.contains(" (")) {
+                subject = subject.substring(0, subject.lastIndexOf(" ("));
+            }
+            
+            currentChatSubject = subject;
+            
+            // Müşteri ID'sini bul
+            List<User> customers = UserDAO.getAllCustomers();
+            for (User customer : customers) {
+                if (customer.getUsername().equals(customerName)) {
+                    currentChatCustomerId = customer.getId();
+                    break;
+                }
+            }
+            
+            if (chatCurrentTopicLabel != null)
+                chatCurrentTopicLabel.setText(subject);
+            if (chatCustomerNameLabel != null)
+                chatCustomerNameLabel.setText(customerName);
+            
+            chatMessagesBox.getChildren().clear();
+            
+            // Konuşmayı yükle
+            List<Message> msgs = MessageDAO.getConversation(currentChatCustomerId, currentUser.getId());
+            for (Message m : msgs) {
+                if (m.getSubject().equalsIgnoreCase(subject)) {
+                    addMessageBubble(m.getContent(), m.getSenderId() == currentUser.getId(), 
+                        m.getCreatedAt() != null ? m.getCreatedAt().toString() : "");
+                }
+            }
+            
+            // Scroll'u en aşağı kaydır
+            new java.util.Timer().schedule(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    javafx.application.Platform.runLater(() -> {
+                        if (chatScroll != null) chatScroll.setVvalue(1.0);
+                    });
+                }
+            }, 100);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load chat: " + e.getMessage());
+        }
+    }
+
+    private void addMessageBubble(String text, boolean isMe, String timestamp) {
+        if (chatMessagesBox == null) return;
+        
+        Label lbl = new Label(text);
+        lbl.setWrapText(true);
+        lbl.setMaxWidth(350);
+        lbl.setPadding(new Insets(10, 15, 10, 15));
+        lbl.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 13px;");
+        
+        HBox box = new HBox();
+        box.setPadding(new Insets(0, 0, 5, 0));
+        
+        if (isMe) {
+            // OWNER MESAJI (SAĞ) - Mavi
+            lbl.setStyle("-fx-background-color: #2196f3; " +
+                         "-fx-background-radius: 15 15 0 15; " +
+                         "-fx-text-fill: white; " +
+                         "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1); " +
+                         "-fx-font-family: 'Segoe UI'; -fx-font-size: 13px;");
+            box.setAlignment(Pos.CENTER_RIGHT);
+        } else {
+            // CUSTOMER MESAJI (SOL) - Beyaz
+            lbl.setStyle("-fx-background-color: #ffffff; " +
+                         "-fx-background-radius: 15 15 15 0; " +
+                         "-fx-text-fill: black; " +
+                         "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1); " +
+                         "-fx-font-family: 'Segoe UI'; -fx-font-size: 13px;");
+            box.setAlignment(Pos.CENTER_LEFT);
+        }
+        
+        box.getChildren().add(lbl);
+        chatMessagesBox.getChildren().add(box);
+        
+        // Otomatik scroll
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                javafx.application.Platform.runLater(() -> {
+                    if (chatScroll != null) chatScroll.setVvalue(1.0);
+                });
+            }
+        }, 100);
     }
 
     @FXML
@@ -587,50 +1147,57 @@ public class OwnerController {
     }
 
     @FXML
-    private void handleReplyMessage() {
-        Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Warning", "Lütfen cevaplanacak bir mesaj seçin.");
+    private void handleSendMessage() {
+        if (chatInput == null || currentChatSubject == null || currentChatCustomerId == 0) {
+            showAlert("Warning", "Please select a conversation first.");
             return;
         }
-
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Mesajı Cevapla");
-        dialog.setHeaderText("Kime: " + selected.getSenderName());
-        dialog.setContentText("Cevabınız:");
-
-        dialog.showAndWait().ifPresent(replyText -> {
-            if (replyText.trim().isEmpty()) return;
-            
-            boolean sent = MessageDAO.sendMessage(
-                currentUser.getId(), 
-                selected.getSenderId(), 
-                selected.getSubject(), // "RE:" eklemeden, aynı konu ile gönder
-                replyText
-            );
-
-            if (sent) {
-                showAlert("Success", "Cevap gönderildi.");
-                // Cevap gönderilince ticket durumu güncellenebilir (İsteğe bağlı)
-                MessageDAO.updateTicketStatus(selected.getSubject(), "RESOLVED"); 
+        
+        String txt = chatInput.getText().trim();
+        if (txt.isEmpty()) return;
+        
+        try {
+            if (MessageDAO.sendMessage(currentUser.getId(), currentChatCustomerId, currentChatSubject, txt)) {
+                addMessageBubble(txt, true, LocalDateTime.now().toString());
+                chatInput.clear();
+                if (chatScroll != null) chatScroll.setVvalue(1.0);
             } else {
-                showAlert("Error", "Mesaj gönderilemedi.");
+                showAlert("Error", "Failed to send message.");
             }
-        });
+        } catch (Exception e) {
+            showAlert("Error", "Error sending message: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleDeleteMessage() {
-        Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        
-        if (MessageDAO.deleteMessage(selected.getId())) {
-            loadMessages();
-            messageContentArea.clear();
-            messageFromLabel.setText("-");
-            messageSubjectLabel.setText("-");
-            messageDateLabel.setText("-");
+        if (currentChatSubject == null || currentChatCustomerId == 0) {
+            showAlert("Warning", "Please select a conversation to delete.");
+            return;
         }
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Deletion");
+        confirm.setHeaderText("Delete Conversation");
+        confirm.setContentText("Are you sure you want to delete this conversation?");
+        
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    if (MessageDAO.deleteChatTopic(currentChatCustomerId, currentChatSubject)) {
+                        loadMessages();
+                        if (chatMessagesBox != null) chatMessagesBox.getChildren().clear();
+                        if (chatCurrentTopicLabel != null) chatCurrentTopicLabel.setText("-");
+                        if (chatCustomerNameLabel != null) chatCustomerNameLabel.setText("-");
+                        showAlert("Success", "Conversation deleted.");
+                    } else {
+                        showAlert("Error", "Failed to delete conversation.");
+                    }
+                } catch (Exception e) {
+                    showAlert("Error", "Error deleting conversation: " + e.getMessage());
+                }
+            }
+        });
     }
 
     // --- SETTINGS (COUPONS & LOYALTY) ---
@@ -652,11 +1219,24 @@ public class OwnerController {
     }
 
     private void loadSettings() {
-        int[] loyalty = SettingsDAO.getLoyaltySettings();
-        if (minOrdersField != null)
-            minOrdersField.setText(String.valueOf(loyalty[0]));
-        if (loyaltyDiscountField != null)
-            loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
+        try {
+            Integer[] loyalty = SettingsDAO.getLoyaltySettings();
+            if (minOrdersField != null) {
+                if (loyalty[0] != null) {
+                    minOrdersField.setText(String.valueOf(loyalty[0]));
+                } else {
+                    minOrdersField.setText(""); // Boş bırak
+                }
+            }
+            if (loyaltyDiscountField != null)
+                loyaltyDiscountField.setText(String.valueOf(loyalty[1]));
+            
+            double minCartValue = SettingsDAO.getMinCartValue();
+            if (minCartValueField != null)
+                minCartValueField.setText(String.format("%.2f", minCartValue));
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load settings: " + e.getMessage());
+        }
     }
 
     @FXML
@@ -680,6 +1260,7 @@ public class OwnerController {
         TextField minField = new TextField();
         minField.setPromptText("Min Purchase (TL)");
         DatePicker datePicker = new DatePicker();
+        datePicker.setValue(java.time.LocalDate.now().plusMonths(1));
 
         grid.add(new Label("Code:"), 0, 0);
         grid.add(codeField, 1, 0);
@@ -695,12 +1276,34 @@ public class OwnerController {
         dialog.setResultConverter(btn -> {
             if (btn == saveBtn) {
                 try {
-                    return SettingsDAO.addCoupon(
-                            codeField.getText(),
-                            Double.parseDouble(discField.getText()),
-                            Double.parseDouble(minField.getText()),
-                            datePicker.getValue());
+                    String code = codeField.getText().trim().toUpperCase();
+                    double discount = Double.parseDouble(discField.getText());
+                    double minPurchase = Double.parseDouble(minField.getText());
+                    java.time.LocalDate validUntil = datePicker.getValue();
+
+                    if (code.isEmpty()) {
+                        showAlert("Error", "Coupon code cannot be empty.");
+                        return false;
+                    }
+                    if (discount <= 0 || discount > 100) {
+                        showAlert("Error", "Discount must be between 0 and 100.");
+                        return false;
+                    }
+                    if (minPurchase < 0) {
+                        showAlert("Error", "Minimum purchase cannot be negative.");
+                        return false;
+                    }
+                    if (validUntil == null || validUntil.isBefore(java.time.LocalDate.now())) {
+                        showAlert("Error", "Valid until date must be in the future.");
+                        return false;
+                    }
+
+                    return SettingsDAO.addCoupon(code, discount, minPurchase, validUntil);
+                } catch (NumberFormatException e) {
+                    showAlert("Error", "Please enter valid numeric values.");
+                    return false;
                 } catch (Exception e) {
+                    showAlert("Error", "Error adding coupon: " + e.getMessage());
                     return false;
                 }
             }
@@ -717,14 +1320,165 @@ public class OwnerController {
     }
 
     @FXML
+    private void handleRemoveCoupon() {
+        Coupon selected = couponsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Warning", "Select a coupon to delete.");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Deletion");
+        confirm.setHeaderText("Delete Coupon");
+        confirm.setContentText("Are you sure you want to delete coupon " + selected.getCode() + "?");
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    if (SettingsDAO.deleteCoupon(selected.getId())) {
+                        loadCoupons();
+                        showAlert("Success", "Coupon deleted.");
+                    } else {
+                        showAlert("Error", "Could not delete coupon.");
+                    }
+                } catch (Exception e) {
+                    showAlert("Error", "Error deleting coupon: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    @FXML
+    private void handleUpdateCoupon() {
+        Coupon selected = couponsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Warning", "Select a coupon to update.");
+            return;
+        }
+
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Update Coupon");
+        dialog.setHeaderText("Update coupon: " + selected.getCode());
+
+        ButtonType saveBtn = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField codeField = new TextField(selected.getCode());
+        TextField discField = new TextField(String.valueOf(selected.getDiscountPercentage()));
+        TextField minField = new TextField(String.valueOf(selected.getMinPurchaseAmount()));
+        DatePicker datePicker = new DatePicker(selected.getValidUntil().toLocalDateTime().toLocalDate());
+        ComboBox<String> statusCombo = new ComboBox<>();
+        statusCombo.getItems().addAll("Active", "Inactive");
+        statusCombo.setValue(selected.isActive() ? "Active" : "Inactive");
+
+        grid.add(new Label("Code:"), 0, 0);
+        grid.add(codeField, 1, 0);
+        grid.add(new Label("Discount (%):"), 0, 1);
+        grid.add(discField, 1, 1);
+        grid.add(new Label("Min Purchase:"), 0, 2);
+        grid.add(minField, 1, 2);
+        grid.add(new Label("Valid Until:"), 0, 3);
+        grid.add(datePicker, 1, 3);
+        grid.add(new Label("Status:"), 0, 4);
+        grid.add(statusCombo, 1, 4);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == saveBtn) {
+                try {
+                    String code = codeField.getText().trim().toUpperCase();
+                    double discount = Double.parseDouble(discField.getText());
+                    double minPurchase = Double.parseDouble(minField.getText());
+                    java.time.LocalDate validUntil = datePicker.getValue();
+                    boolean isActive = statusCombo.getValue().equals("Active");
+
+                    if (code.isEmpty()) {
+                        showAlert("Error", "Coupon code cannot be empty.");
+                        return false;
+                    }
+                    if (discount <= 0 || discount > 100) {
+                        showAlert("Error", "Discount must be between 0 and 100.");
+                        return false;
+                    }
+                    if (minPurchase < 0) {
+                        showAlert("Error", "Minimum purchase cannot be negative.");
+                        return false;
+                    }
+                    if (validUntil == null) {
+                        showAlert("Error", "Please select a valid date.");
+                        return false;
+                    }
+
+                    return SettingsDAO.updateCoupon(selected.getId(), code, discount, minPurchase, validUntil, isActive);
+                } catch (NumberFormatException e) {
+                    showAlert("Error", "Please enter valid numeric values.");
+                    return false;
+                } catch (Exception e) {
+                    showAlert("Error", "Error updating coupon: " + e.getMessage());
+                    return false;
+                }
+            }
+            return null;
+        });
+
+        Optional<Boolean> result = dialog.showAndWait();
+        if (result.isPresent() && result.get()) {
+            loadCoupons();
+            showAlert("Success", "Coupon updated.");
+        }
+    }
+
+    @FXML
     private void handleSaveLoyaltySettings() {
         try {
-            int minOrders = Integer.parseInt(minOrdersField.getText());
+            Integer minOrders = null;
+            String minOrdersText = minOrdersField.getText().trim();
+            if (!minOrdersText.isEmpty()) {
+                minOrders = Integer.parseInt(minOrdersText);
+                if (minOrders < 0) {
+                    showAlert("Error", "Minimum orders cannot be negative.");
+                    return;
+                }
+            }
+            
             double discount = Double.parseDouble(loyaltyDiscountField.getText());
+            if (discount < 0 || discount > 100) {
+                showAlert("Error", "Discount must be between 0 and 100.");
+                return;
+            }
+            
             SettingsDAO.updateLoyaltySettings(minOrders, discount);
             showAlert("Success", "Loyalty settings updated.");
         } catch (NumberFormatException e) {
             showAlert("Error", "Please enter valid numbers.");
+        } catch (Exception e) {
+            showAlert("Error", "Error updating loyalty settings: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleSaveMinCartValue() {
+        try {
+            double minValue = Double.parseDouble(minCartValueField.getText());
+            if (minValue < 0) {
+                showAlert("Error", "Minimum cart value cannot be negative.");
+                return;
+            }
+            if (SettingsDAO.updateMinCartValue(minValue)) {
+                showAlert("Success", "Minimum cart value updated.");
+            } else {
+                showAlert("Error", "Failed to update minimum cart value.");
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Error", "Please enter a valid number.");
+        } catch (Exception e) {
+            showAlert("Error", "Error updating minimum cart value: " + e.getMessage());
         }
     }
 
@@ -732,40 +1486,115 @@ public class OwnerController {
     @FXML
     private void handleGenerateReport() {
         String type = reportTypeCombo.getValue();
-        if (type == null)
+        if (type == null) {
+            showAlert("Warning", "Please select a report type.");
             return;
+        }
 
         reportContentBox.getChildren().clear();
 
-        TableView<ReportItem> table = new TableView<>();
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        try {
+            if (type.contains("Revenue by Time")) {
+                // Time-based reports with charts
+                String period = type.contains("Daily") ? "daily" : 
+                               type.contains("Weekly") ? "weekly" : "monthly";
+                Map<String, Double> data = OrderDAO.getRevenueByTimeReport(period);
+                
+                if (data.isEmpty()) {
+                    Label noDataLabel = new Label("No data available for this period.");
+                    noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
+                    reportContentBox.getChildren().add(noDataLabel);
+                    return;
+                }
 
-        TableColumn<ReportItem, String> keyCol = new TableColumn<>("Category");
-        keyCol.setCellValueFactory(new PropertyValueFactory<>("key"));
+                // Create Bar Chart
+                CategoryAxis xAxis = new CategoryAxis();
+                NumberAxis yAxis = new NumberAxis();
+                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+                barChart.setTitle("Revenue by " + period.substring(0, 1).toUpperCase() + period.substring(1));
+                barChart.setLegendVisible(false);
 
-        TableColumn<ReportItem, String> valCol = new TableColumn<>("Value");
-        valCol.setCellValueFactory(new PropertyValueFactory<>("value"));
+                XYChart.Series<String, Number> series = new XYChart.Series<>();
+                data.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                barChart.getData().add(series);
+                barChart.setPrefHeight(400);
+                barChart.setPrefWidth(800);
 
-        table.getColumns().addAll(keyCol, valCol);
+                reportContentBox.getChildren().add(barChart);
 
-        ObservableList<ReportItem> data = FXCollections.observableArrayList();
+            } else if (type.equals("Revenue by Amount Range")) {
+                Map<String, Double> data = OrderDAO.getRevenueByAmountRange();
+                
+                if (data.isEmpty()) {
+                    Label noDataLabel = new Label("No data available.");
+                    noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
+                    reportContentBox.getChildren().add(noDataLabel);
+                    return;
+                }
 
-        if (type.equals("Product Revenue")) {
-            keyCol.setText("Product Name");
-            valCol.setText("Total Revenue (TL)");
-            Map<String, Double> map = OrderDAO.getRevenueByProductReport();
-            map.forEach((k, v) -> data.add(new ReportItem(k, String.format("%.2f TL", v))));
+                // Create Pie Chart
+                PieChart pieChart = new PieChart();
+                pieChart.setTitle("Revenue by Amount Range");
+                data.forEach((k, v) -> pieChart.getData().add(new PieChart.Data(k + " (" + String.format("%.2f TL", v) + ")", v)));
+                pieChart.setPrefHeight(400);
+                pieChart.setPrefWidth(600);
 
-        } else if (type.equals("Carrier Performance")) {
-            keyCol.setText("Carrier Username");
-            valCol.setText("Completed Deliveries");
-            Map<String, Integer> map = OrderDAO.getCarrierPerformanceReport();
-            map.forEach((k, v) -> data.add(new ReportItem(k, String.valueOf(v))));
+                reportContentBox.getChildren().add(pieChart);
+
+            } else if (type.equals("Product Revenue")) {
+                Map<String, Double> map = OrderDAO.getRevenueByProductReport();
+                
+                if (map.isEmpty()) {
+                    Label noDataLabel = new Label("No product revenue data available.");
+                    noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
+                    reportContentBox.getChildren().add(noDataLabel);
+                    return;
+                }
+
+                // Create Bar Chart
+                CategoryAxis xAxis = new CategoryAxis();
+                NumberAxis yAxis = new NumberAxis();
+                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+                barChart.setTitle("Product Revenue");
+                barChart.setLegendVisible(false);
+
+                XYChart.Series<String, Number> series = new XYChart.Series<>();
+                map.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                barChart.getData().add(series);
+                barChart.setPrefHeight(400);
+                barChart.setPrefWidth(800);
+
+                reportContentBox.getChildren().add(barChart);
+
+            } else if (type.equals("Carrier Performance")) {
+                Map<String, Integer> map = OrderDAO.getCarrierPerformanceReport();
+                
+                if (map.isEmpty()) {
+                    Label noDataLabel = new Label("No carrier performance data available.");
+                    noDataLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 20;");
+                    reportContentBox.getChildren().add(noDataLabel);
+                    return;
+                }
+
+                // Create Bar Chart
+                CategoryAxis xAxis = new CategoryAxis();
+                NumberAxis yAxis = new NumberAxis();
+                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+                barChart.setTitle("Carrier Performance (Completed Deliveries)");
+                barChart.setLegendVisible(false);
+
+                XYChart.Series<String, Number> series = new XYChart.Series<>();
+                map.forEach((k, v) -> series.getData().add(new XYChart.Data<>(k, v)));
+                barChart.getData().add(series);
+                barChart.setPrefHeight(400);
+                barChart.setPrefWidth(800);
+
+                reportContentBox.getChildren().add(barChart);
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Failed to generate report: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        table.setItems(data);
-        table.setPrefHeight(400);
-        reportContentBox.getChildren().add(table);
     }
 
     @FXML
@@ -799,6 +1628,7 @@ public class OwnerController {
 
             VBox box = (VBox) reportContentBox;
             if (!box.getChildren().isEmpty() && box.getChildren().get(0) instanceof TableView) {
+                @SuppressWarnings("unchecked")
                 TableView<ReportItem> table = (TableView<ReportItem>) box.getChildren().get(0);
                 for (ReportItem item : table.getItems()) {
                     writer.println(String.format("%-30s : %s", item.getKey(), item.getValue()));
