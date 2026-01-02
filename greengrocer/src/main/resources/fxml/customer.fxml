@@ -1,88 +1,258 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-    fx:controller="com.group12.greengrocer.controllers.CustomerController"
-    prefWidth="1200" prefHeight="800" style="-fx-background-color: #f4f6f8;">
+<StackPane prefHeight="800" prefWidth="1200" style="-fx-background-color: #f4f6f8;"
+    xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.group12.greengrocer.controllers.CustomerController">
 
-    <top>
-        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #2e7d32; -fx-padding: 15 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 2);">
-            <Label text="GreenGrocer Market" style="-fx-text-fill: white; -fx-font-size: 22px; -fx-font-weight: bold; -fx-font-family: 'Segoe UI';" />
-            
-            <Region HBox.hgrow="ALWAYS" />
-            
-            <HBox alignment="CENTER" spacing="5" style="-fx-background-color: white; -fx-background-radius: 20; -fx-padding: 5 15;">
-                <TextField fx:id="searchField" promptText="Search fresh products..." style="-fx-background-color: transparent; -fx-border-width: 0;" prefWidth="250" onKeyReleased="#handleSearch"/>
-                <Button text="X" onAction="#handleClearSearch" style="-fx-background-color: transparent; -fx-text-fill: #999; -fx-font-weight: bold; -fx-cursor: hand;"/>
+    <!-- ANA İÇERİK (Arka Plan) -->
+    <BorderPane fx:id="mainContent">
+        <top>
+            <HBox alignment="CENTER_LEFT" spacing="20"
+                style="-fx-background-color: #2e7d32; -fx-padding: 15 25;">
+                <effect>
+                    <DropShadow color="rgba(0,0,0,0.2)" offsetY="2" />
+                </effect>
+                <Label style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;"
+                    text="GreenGrocer" />
+                <Region HBox.hgrow="ALWAYS" />
+
+                <!-- Arama ve Sıralama -->
+                <HBox alignment="CENTER" spacing="10">
+                    <HBox alignment="CENTER" spacing="5"
+                        style="-fx-background-color: white; -fx-background-radius: 20; -fx-padding: 5 15;">
+                        <TextField fx:id="searchField" onKeyReleased="#handleSearch" prefWidth="200"
+                            promptText="Ürün ara..." style="-fx-background-color: transparent;" />
+                        <Button onAction="#handleClearSearch"
+                            style="-fx-background-color: transparent; -fx-text-fill: #999; -fx-cursor: hand;"
+                            text="X" />
+                    </HBox>
+                    <!-- SIRALAMA KUTUSU -->
+                    <ComboBox fx:id="sortComboBox" prefHeight="35" promptText="Sıralama"
+                        style="-fx-background-radius: 20; -fx-background-color: #a5d6a7;" />
+                </HBox>
+
+                <Region prefWidth="20" />
+                <Label fx:id="usernameLabel" style="-fx-text-fill: white; -fx-font-weight: bold;"
+                    text="User" />
+                <Button onAction="#handleLogout"
+                    style="-fx-background-color: #c62828; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand;"
+                    text="Çıkış" />
             </HBox>
+        </top>
 
-            <Region prefWidth="20" />
+        <left>
+            <VBox prefWidth="240" spacing="0"
+                style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;">
+                <VBox alignment="CENTER" spacing="10"
+                    style="-fx-padding: 20; -fx-background-color: #e8f5e9;">
+                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2e7d32;" text="SEPETİM" />
+                    <Label fx:id="cartItemsLabel"
+                        style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1b5e20;"
+                        text="0 ürün" />
+                    <Button maxWidth="Infinity" onAction="#handleViewCart"
+                        style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-cursor: hand; -fx-padding: 10;"
+                        text="Sepete Git" />
+                </VBox>
+                <VBox spacing="5" style="-fx-padding: 10;">
+                    <Button maxWidth="Infinity" onAction="#handleViewOrders"
+                        style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 12; -fx-cursor: hand;"
+                        text="📦  Siparişlerim" />
+                    <Button maxWidth="Infinity" onAction="#handleOpenChat"
+                        style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 12; -fx-cursor: hand;"
+                        text="💬  Destek / Mesajlar" />
+                    <Button maxWidth="Infinity" onAction="#handleEditProfile"
+                        style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 12; -fx-cursor: hand;"
+                        text="👤  Profil Düzenle" />
+                </VBox>
+            </VBox>
+        </left>
 
-            <HBox alignment="CENTER" spacing="10">
-                <Label fx:id="usernameLabel" text="Hello, Customer" style="-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" />
-                <Button text="Logout" onAction="#handleLogout" style="-fx-background-color: #c62828; -fx-text-fill: white; -fx-background-radius: 5; -fx-cursor: hand;" />
+        <center>
+            <ScrollPane fitToWidth="true"
+                style="-fx-background-color: transparent; -fx-background: transparent;">
+                <VBox spacing="30" style="-fx-padding: 30;">
+                    <VBox spacing="15">
+                        <Label
+                            style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #37474f;"
+                            text="🌿 Taze Sebzeler" />
+                        <FlowPane fx:id="vegetablesFlowPane" hgap="20" vgap="20" />
+                    </VBox>
+                    <VBox spacing="15">
+                        <Label
+                            style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #37474f;"
+                            text="🍎 Taze Meyveler" />
+                        <FlowPane fx:id="fruitsFlowPane" hgap="20" vgap="20" />
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+        </center>
+    </BorderPane>
+
+    <!-- OVERLAY CONTAINER (POPUP KATMANI) -->
+    <StackPane fx:id="overlayContainer" style="-fx-background-color: rgba(0,0,0,0.4);"
+        visible="false">
+
+        <!-- 1. SİPARİŞLER -->
+        <VBox fx:id="ordersOverlay" maxHeight="500" maxWidth="850" spacing="10"
+            style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20;">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.5)" radius="20" />
+            </effect>
+            <HBox alignment="CENTER_LEFT">
+                <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Sipariş Geçmişim" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Button onAction="#closeAllOverlays"
+                    style="-fx-background-color: transparent; -fx-text-fill: #999; -fx-font-weight: bold; -fx-cursor: hand;"
+                    text="✕ Kapat" />
             </HBox>
-        </HBox>
-    </top>
-
-    <left>
-        <VBox spacing="0" style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;" prefWidth="240">
-            <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20; -fx-background-color: #e8f5e9;">
-                <Label text="MY CART" style="-fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
-                <Label fx:id="cartItemsLabel" text="0 items" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1b5e20;"/>
-                <Button text="View Cart &amp; Checkout" onAction="#handleViewCart" maxWidth="Infinity" 
-                        style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-cursor: hand; -fx-padding: 10;"/>
-            </VBox>
-
-            <Separator />
-
-            <VBox spacing="5" style="-fx-padding: 10;">
-                <Button text="🏠  Browse Products" onAction="#handleBrowseProducts" maxWidth="Infinity" alignment="BASELINE_LEFT"
-                        style="-fx-background-color: transparent; -fx-padding: 12; -fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #333;"/>
-                
-                <Button text="📦  My Orders" onAction="#handleViewOrders" maxWidth="Infinity" alignment="BASELINE_LEFT"
-                        style="-fx-background-color: transparent; -fx-padding: 12; -fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #333;"/>
-                
-                <Button text="🚚  My Deliveries" onAction="#handleViewDeliveries" maxWidth="Infinity" alignment="BASELINE_LEFT"
-                        style="-fx-background-color: transparent; -fx-padding: 12; -fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #333;"/>
-                
-                <Button text="✉️  Message Owner" onAction="#handleSendMessage" maxWidth="Infinity" alignment="BASELINE_LEFT"
-                        style="-fx-background-color: transparent; -fx-padding: 12; -fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #333;"/>
-                
-                <Button text="👤  Edit Profile" onAction="#handleEditProfile" maxWidth="Infinity" alignment="BASELINE_LEFT"
-                        style="-fx-background-color: transparent; -fx-padding: 12; -fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #333;"/>
-            </VBox>
+            <TableView fx:id="ordersTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colId" text="#" />
+                    <TableColumn fx:id="colDate" text="Tarih" prefWidth="120" />
+                    <TableColumn fx:id="colTotal" text="Tutar" />
+                    <TableColumn fx:id="colStatus" text="Durum" />
+                    <TableColumn fx:id="colItems" text="Ürünler" prefWidth="200" />
+                    <TableColumn fx:id="colAction" text="İşlemler" prefWidth="180" />
+                </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                </columnResizePolicy>
+            </TableView>
         </VBox>
-    </left>
 
-    <center>
-        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED">
-            <VBox spacing="30" style="-fx-padding: 30;">
-                
-                <VBox spacing="15">
-                    <HBox alignment="CENTER_LEFT" spacing="10">
-                        <Label text="🥬 Fresh Vegetables" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #37474f;"/>
-                        <Separator HBox.hgrow="ALWAYS"/>
-                    </HBox>
-                    <FlowPane fx:id="vegetablesFlowPane" hgap="20" vgap="20" prefWrapLength="800" />
-                </VBox>
+        <!-- 2. PROFIL -->
+        <VBox fx:id="profileOverlay" maxHeight="450" maxWidth="400" spacing="15"
+            style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 30;">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.5)" radius="20" />
+            </effect>
+            <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"
+                text="Profili Düzenle" />
+            <Label style="-fx-font-weight: bold;" text="Adres:" />
+            <TextField fx:id="editAddressField" style="-fx-background-radius: 5;" />
+            <Label style="-fx-font-weight: bold;" text="Email:" />
+            <TextField fx:id="editEmailField" style="-fx-background-radius: 5;" />
+            <Label style="-fx-font-weight: bold;" text="Telefon:" />
+            <TextField fx:id="editPhoneField" style="-fx-background-radius: 5;" />
+            <Label style="-fx-font-weight: bold;" text="Yeni Şifre:" />
+            <PasswordField fx:id="editPasswordField" style="-fx-background-radius: 5;" />
+            <HBox alignment="CENTER" spacing="10">
+                <Button maxWidth="Infinity" onAction="#saveProfile"
+                    style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-cursor: hand;"
+                    text="Kaydet" HBox.hgrow="ALWAYS" />
+                <Button maxWidth="Infinity" onAction="#closeAllOverlays"
+                    style="-fx-background-color: #ddd; -fx-cursor: hand;" text="İptal"
+                    HBox.hgrow="ALWAYS" />
+            </HBox>
+        </VBox>
 
-                <VBox spacing="15">
-                    <HBox alignment="CENTER_LEFT" spacing="10">
-                        <Label text="🍎 Fresh Fruits" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #37474f;"/>
-                        <Separator HBox.hgrow="ALWAYS"/>
-                    </HBox>
-                    <FlowPane fx:id="fruitsFlowPane" hgap="20" vgap="20" prefWrapLength="800" />
-                </VBox>
+        <!-- 3. GELİŞMİŞ CHAT (WHATSAPP TARZI - DÜZELTİLMİŞ RENKLER) -->
+        <HBox fx:id="chatOverlay" maxHeight="600" maxWidth="900"
+            style="-fx-background-color: white; -fx-background-radius: 15; -fx-border-radius: 15;">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.4)" radius="30" offsetY="10" />
+            </effect>
 
-                <Region prefHeight="50" />
+            <!-- SOL MENÜ: KONULAR -->
+            <VBox minWidth="280" spacing="0"
+                style="-fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0; -fx-background-color: #ffffff; -fx-background-radius: 15 0 0 15;">
+                <HBox alignment="CENTER_LEFT"
+                    style="-fx-padding: 20; -fx-background-color: #f0f2f5; -fx-background-radius: 15 0 0 0; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;">
+                    <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #333;"
+                        text="💬 Mesajlarım" />
+                </HBox>
+                <Button onAction="#handleNewTicket" maxWidth="Infinity" text="+ Yeni Destek Talebi"
+                    style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 12; -fx-background-radius: 0;" />
+                <ListView fx:id="chatTopicsList" VBox.vgrow="ALWAYS"
+                    style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0; -fx-font-size: 13px;" />
             </VBox>
-        </ScrollPane>
-    </center>
 
-</BorderPane>
+            <!-- SAĞ İÇERİK: MESAJLAŞMA -->
+            <VBox HBox.hgrow="ALWAYS"
+                style="-fx-background-color: #efe7dd; -fx-background-radius: 0 15 15 0;">
+                <HBox alignment="CENTER_LEFT" spacing="15"
+                    style="-fx-background-color: #f0f2f5; -fx-padding: 15; -fx-background-radius: 0 15 0 0; -fx-border-color: #d1d7db; -fx-border-width: 0 0 1 0;">
+                    <VBox>
+                        <Label fx:id="chatCurrentTopicLabel" text="Genel Destek"
+                            style="-fx-text-fill: #111; -fx-font-weight: bold; -fx-font-size: 16px;" />
+                        <Label text="GreenGrocer Destek Hattı"
+                            style="-fx-text-fill: #777; -fx-font-size: 11px;" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button onAction="#handleDeleteChat" text="🗑 Sohbeti Temizle"
+                        style="-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-font-size: 12px; -fx-cursor: hand; -fx-background-radius: 5;" />
+                    <Button onAction="#closeAllOverlays" text="✕"
+                        style="-fx-background-color: transparent; -fx-text-fill: #555; -fx-font-weight: bold; -fx-font-size: 16px; -fx-cursor: hand;" />
+                </HBox>
+
+                <!-- Chat Alanı Arka Planı (Bej) -->
+                <ScrollPane fx:id="chatScroll" fitToWidth="true" fitToHeight="true"
+                    style="-fx-background: #efe7dd; -fx-background-color: #efe7dd; -fx-border-width: 0; -fx-padding: 0;"
+                    VBox.vgrow="ALWAYS">
+                    <content>
+                        <VBox fx:id="chatMessagesBox" spacing="15"
+                            style="-fx-padding: 20; -fx-background-color: #efe7dd;" />
+                    </content>
+                </ScrollPane>
+
+                <HBox spacing="10"
+                    style="-fx-padding: 15; -fx-background-color: #f0f2f5; -fx-background-radius: 0 0 15 0; -fx-border-color: #d1d7db; -fx-border-width: 1 0 0 0;">
+                    <TextField fx:id="chatInput" promptText="Bir mesaj yazın..."
+                        style="-fx-background-radius: 20; -fx-background-color: white; -fx-border-color: white; -fx-padding: 10;"
+                        HBox.hgrow="ALWAYS" />
+                    <Button onAction="#sendMessage" text="➤"
+                        style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-background-radius: 50; -fx-cursor: hand; -fx-font-size: 14px; -fx-min-width: 40; -fx-min-height: 40;" />
+                </HBox>
+            </VBox>
+        </HBox>
+
+        <!-- 4. SİPARİŞ DETAY PENCERESİ -->
+        <VBox fx:id="orderDetailOverlay" maxHeight="600" maxWidth="500" spacing="10"
+            style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20;"
+            visible="false">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.5)" radius="20" />
+            </effect>
+            <HBox alignment="CENTER_LEFT" spacing="10"
+                style="-fx-border-color: #eee; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 10 0;">
+                <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"
+                    text="Sipariş İçeriği" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Button onAction="#closeAllOverlays"
+                    style="-fx-background-color: transparent; -fx-text-fill: #999; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 14px;"
+                    text="✕" />
+            </HBox>
+            <Label fx:id="detailOrderIdLabel" style="-fx-text-fill: #777; -fx-font-size: 12px;"
+                text="Sipariş Detayları" />
+            <ScrollPane fitToWidth="true"
+                style="-fx-background-color: transparent; -fx-background: transparent;"
+                VBox.vgrow="ALWAYS">
+                <VBox fx:id="orderDetailContainer" spacing="10" style="-fx-padding: 5;" />
+            </ScrollPane>
+            <Button maxWidth="Infinity" onAction="#closeAllOverlays"
+                style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 5;"
+                text="Kapat" />
+        </VBox>
+
+    </StackPane>
+
+</StackPane>

@@ -2,6 +2,7 @@ module com.group12.greengrocer {
     requires javafx.controls;
     requires javafx.fxml;
     requires java.sql;
+    requires java.desktop;
     requires itextpdf;
     requires mysql.connector.j; 
 

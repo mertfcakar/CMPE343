@@ -26,8 +26,10 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
+import javafx.geometry.Insets;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -77,6 +79,10 @@ public class CarrierController {
     public void initData(User user) {
         this.currentUser = user;
         lblUsername.setText("👤 " + user.getUsername());
+
+        double rating = OrderDAO.getCarrierAverageRating(user.getId());
+        lblCarrierRegion.setText(String.format("Bölge: %s | ⭐ Puan: %.1f", 
+            (user.getNeighborhood() != null ? user.getNeighborhood() : "Yok"), rating));
 
         String myNeighborhood = user.getNeighborhood();
         lblCarrierRegion.setText("Bölge: " + (myNeighborhood != null ? myNeighborhood : "Atanmamış"));
@@ -465,11 +471,85 @@ public class CarrierController {
     @FXML
     public void handleLogout() {
         try {
+            Stage stage = (Stage) lblUsername.getScene().getWindow(); // lblUsername veya lblActiveOrders kullanabilirsin
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
-            Stage stage = (Stage) lblActiveOrders.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            
+            // 1280x800 boyutunda aç
+            Scene scene = new Scene(root, 1200, 900);
+            
+            stage.setScene(scene);
+            stage.setMaximized(false);
+            stage.setWidth(1200);
+            stage.setHeight(900);
+            stage.centerOnScreen();
+            stage.show();
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @FXML
+    private void handleViewRatings() {
+        List<OrderDAO.CarrierRating> ratings = OrderDAO.getCarrierRatings(currentUser.getId());
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("⭐ Değerlendirmelerim");
+        dialog.setHeaderText("Aldığınız müşteri değerlendirmeleri:");
+
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(500);
+        content.setPrefHeight(400);
+
+        if (ratings.isEmpty()) {
+            Label noRatingsLabel = new Label("Henüz değerlendirme almadınız.");
+            noRatingsLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
+            content.getChildren().add(noRatingsLabel);
+        } else {
+            // Ortalama puan göster
+            double avgRating = ratings.stream().mapToInt(r -> r.rating).average().orElse(0.0);
+            Label avgLabel = new Label(String.format("📊 Ortalama Puan: %.1f/5.0 (%d değerlendirme)", avgRating, ratings.size()));
+            avgLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
+            content.getChildren().add(avgLabel);
+
+            // Değerlendirme listesi
+            ScrollPane scrollPane = new ScrollPane();
+            VBox ratingsBox = new VBox(8);
+
+            for (OrderDAO.CarrierRating rating : ratings) {
+                HBox ratingRow = new HBox(10);
+                ratingRow.setPadding(new Insets(10));
+                ratingRow.setStyle("-fx-background-color: #f9f9f9; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;");
+
+                // Yıldızlar
+                String stars = "★".repeat(rating.rating) + "☆".repeat(5 - rating.rating);
+                Label starsLabel = new Label(stars);
+                starsLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #ff9800;");
+
+                // Bilgiler
+                VBox infoBox = new VBox(2);
+                Label customerLabel = new Label("Müşteri: " + rating.customerName);
+                customerLabel.setStyle("-fx-font-weight: bold;");
+
+                Label orderLabel = new Label("Sipariş #" + rating.orderId);
+                orderLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+
+                Label dateLabel = new Label("Tarih: " + rating.createdAt.format(dtf));
+                dateLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+
+                infoBox.getChildren().addAll(customerLabel, orderLabel, dateLabel);
+
+                ratingRow.getChildren().addAll(starsLabel, infoBox);
+                ratingsBox.getChildren().add(ratingRow);
+            }
+
+            scrollPane.setContent(ratingsBox);
+            scrollPane.setFitToWidth(true);
+            content.getChildren().add(scrollPane);
+        }
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
     }
 }

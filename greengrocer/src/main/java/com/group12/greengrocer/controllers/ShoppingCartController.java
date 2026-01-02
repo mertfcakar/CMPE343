@@ -4,6 +4,7 @@ import com.group12.greengrocer.database.OrderDAO;
 import com.group12.greengrocer.database.SettingsDAO;
 import com.group12.greengrocer.models.CartItem;
 import com.group12.greengrocer.models.Coupon;
+import com.group12.greengrocer.models.User;
 import com.group12.greengrocer.utils.ShoppingCart;
 
 import javafx.fxml.FXML;
@@ -49,13 +50,27 @@ public class ShoppingCartController {
     @FXML
     private Label checkoutMessageLabel;
 
+    @FXML
+    private RadioButton rbCreditCard;
+    @FXML
+    private RadioButton rbCash;
+    private ToggleGroup paymentGroup;
+
     private double discountAmount = 0.0;
     private final double VAT_RATE = 0.18;
 
     @FXML
     private void initialize() {
         setupDeliveryOptions();
+        setupPaymentOptions(); // Ödeme yöntemlerini ayarla
         renderCartItems(); // Tablo yerine görsel kartları yükle
+    }
+
+    private void setupPaymentOptions() {
+        paymentGroup = new ToggleGroup();
+        rbCreditCard.setToggleGroup(paymentGroup);
+        rbCash.setToggleGroup(paymentGroup);
+        rbCash.setSelected(true); // Varsayılan Nakit
     }
 
     // --- YENİ GÖRSEL SEPET MANTIĞI ---
@@ -164,19 +179,22 @@ public class ShoppingCartController {
         double subtotal = ShoppingCart.getInstance().calculateSubtotal();
         double vat = subtotal * VAT_RATE;
 
-        // Kuponu tekrar kontrol et (Tutar değiştiyse limit altına düşmüş olabilir)
-        if (discountAmount > 0) {
-            // Basitlik için burada tekrar hesaplamıyoruz ama gerçekte yapılmalı.
-            // Şimdilik sadece matematiksel işlem:
+        // Loyalty Discount hesapla
+        User user = ShoppingCart.getInstance().getCurrentUser();
+        int completedOrders = OrderDAO.getCompletedOrderCount(user.getId());
+        double loyaltyDiscount = 0;
+        if (completedOrders >= 5) {
+            loyaltyDiscount = subtotal * 0.10; // %10
         }
 
-        double total = subtotal + vat - discountAmount;
+        double totalDiscount = discountAmount + loyaltyDiscount;
+        double total = subtotal + vat - totalDiscount;
         if (total < 0)
             total = 0;
 
         subtotalLabel.setText(String.format("%.2f TL", subtotal));
         vatLabel.setText(String.format("%.2f TL", vat));
-        discountLabel.setText(String.format("-%.2f TL", discountAmount));
+        discountLabel.setText(String.format("-%.2f TL (Coupon: %.2f, Loyalty: %.2f)", totalDiscount, discountAmount, loyaltyDiscount));
         totalLabel.setText(String.format("%.2f TL", total));
     }
 
@@ -244,32 +262,53 @@ public class ShoppingCartController {
             checkoutMessageLabel.setText("Cart is empty!");
             return;
         }
-
-        LocalDate date = deliveryDatePicker.getValue();
-        String time = deliveryTimeCombo.getValue();
-
-        if (date == null || time == null) {
+        if (deliveryDatePicker.getValue() == null || deliveryTimeCombo.getValue() == null) {
             checkoutMessageLabel.setText("Select delivery date/time.");
+            return;
+        }
+        if (paymentGroup.getSelectedToggle() == null) {
+            checkoutMessageLabel.setText("Select a payment method.");
             return;
         }
 
         double subtotal = ShoppingCart.getInstance().calculateSubtotal();
         double vat = subtotal * VAT_RATE;
-        double total = subtotal + vat - discountAmount;
+
+        // Loyalty Discount: 5+ tamamlanmış sipariş için %10 indirim
+        User user = ShoppingCart.getInstance().getCurrentUser();
+        int completedOrders = OrderDAO.getCompletedOrderCount(user.getId());
+        double loyaltyDiscount = 0;
+        if (completedOrders >= 5) {
+            loyaltyDiscount = subtotal * 0.10; // %10 indirim
+        }
+
+        double total = subtotal + vat - discountAmount - loyaltyDiscount;
+
+        // Minimum cart value kontrolü (örneğin 50 TL)
+        double MIN_CART_VALUE = 50.0;
+        if (total < MIN_CART_VALUE) {
+            checkoutMessageLabel.setText("Minimum order value is " + MIN_CART_VALUE + " TL. Current total: " + String.format("%.2f", total) + " TL.");
+            return;
+        }
+
+        // GÜNCELLENDİ: Ödeme Yöntemini Al
+        String paymentMethod = rbCreditCard.isSelected() ? "ONLINE_PAYMENT" : "CASH_ON_DELIVERY";
 
         boolean success = OrderDAO.createOrder(
                 ShoppingCart.getInstance().getCurrentUser(),
                 subtotal, vat, discountAmount, total,
-                date, time);
+                deliveryDatePicker.getValue(), deliveryTimeCombo.getValue(),
+                paymentMethod, loyaltyDiscount // Yeni parametre
+        );
 
         if (success) {
             ShoppingCart.getInstance().clear();
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Success");
             alert.setHeaderText("Order Placed!");
-            alert.setContentText("Your fresh products will be delivered on " + date + " at " + time);
+            alert.setContentText(
+                    "Payment: " + (paymentMethod.equals("ONLINE_PAYMENT") ? "Credit Card" : "Cash on Delivery"));
             alert.showAndWait();
-
             ((Stage) checkoutMessageLabel.getScene().getWindow()).close();
         } else {
             checkoutMessageLabel.setText("Order failed. Database error.");

@@ -54,6 +54,10 @@
                             style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;" 
                             text="↩ Geri Al" disable="true"/>
 
+                    <Button onAction="#handleViewRatings"
+                            style="-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;"
+                            text="⭐ Değerlendirmelerim" />
+
                     <Button onAction="#handleLogout"
                             style="-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-cursor: hand;"
                             text="Çıkış Yap" />

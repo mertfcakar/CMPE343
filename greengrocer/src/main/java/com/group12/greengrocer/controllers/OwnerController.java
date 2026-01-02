@@ -565,9 +565,9 @@ public class OwnerController {
 
     // --- MESSAGES ---
     private void loadMessages() {
-        List<Message> msgs = MessageDAO.getAllMessages();
-        if (messagesListView != null)
-            messagesListView.setItems(FXCollections.observableArrayList(msgs));
+        if (messagesListView != null) {
+            messagesListView.setItems(FXCollections.observableArrayList(MessageDAO.getAllMessages()));
+        }
     }
 
     private void displayMessageDetails(Message msg) {
@@ -589,35 +589,47 @@ public class OwnerController {
     @FXML
     private void handleReplyMessage() {
         Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null)
+        if (selected == null) {
+            showAlert("Warning", "Lütfen cevaplanacak bir mesaj seçin.");
             return;
+        }
 
         TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Reply Message");
-        dialog.setHeaderText("Reply to: " + selected.getSenderName());
-        dialog.setContentText("Message:");
+        dialog.setTitle("Mesajı Cevapla");
+        dialog.setHeaderText("Kime: " + selected.getSenderName());
+        dialog.setContentText("Cevabınız:");
 
         dialog.showAndWait().ifPresent(replyText -> {
-            boolean sent = MessageDAO.replyToMessage(currentUser.getId(), selected.getSenderId(), selected.getSubject(),
-                    replyText);
-            if (sent)
-                showAlert("Success", "Reply sent.");
-            else
-                showAlert("Error", "Could not send reply.");
+            if (replyText.trim().isEmpty()) return;
+            
+            boolean sent = MessageDAO.sendMessage(
+                currentUser.getId(), 
+                selected.getSenderId(), 
+                selected.getSubject(), // "RE:" eklemeden, aynı konu ile gönder
+                replyText
+            );
+
+            if (sent) {
+                showAlert("Success", "Cevap gönderildi.");
+                // Cevap gönderilince ticket durumu güncellenebilir (İsteğe bağlı)
+                MessageDAO.updateTicketStatus(selected.getSubject(), "RESOLVED"); 
+            } else {
+                showAlert("Error", "Mesaj gönderilemedi.");
+            }
         });
     }
 
     @FXML
     private void handleDeleteMessage() {
         Message selected = messagesListView.getSelectionModel().getSelectedItem();
-        if (selected == null)
-            return;
-
+        if (selected == null) return;
+        
         if (MessageDAO.deleteMessage(selected.getId())) {
             loadMessages();
             messageContentArea.clear();
             messageFromLabel.setText("-");
             messageSubjectLabel.setText("-");
+            messageDateLabel.setText("-");
         }
     }
 
@@ -805,19 +817,23 @@ public class OwnerController {
     }
 
     // --- OTHER HANDLERS ---
-    @FXML
+    @FXML 
     private void handleLogout() {
         try {
             Stage stage = (Stage) usernameLabel.getScene().getWindow();
-            stage.close();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
-            Parent root = loader.load();
-            Stage loginStage = new Stage();
-            loginStage.setTitle("GreenGrocer Login");
-            loginStage.setScene(new Scene(root));
-            loginStage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
+            Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
+            
+            // 1280x800 boyutunda aç
+            Scene scene = new Scene(root, 1200, 900);
+            
+            stage.setScene(scene);
+            stage.setMaximized(false);
+            stage.setWidth(1200);
+            stage.setHeight(900);
+            stage.centerOnScreen();
+            stage.show();
+        } catch (Exception e) { 
+            e.printStackTrace(); 
         }
     }
 

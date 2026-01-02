@@ -7,7 +7,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
             fx:controller="com.group12.greengrocer.controllers.ShoppingCartController"
-            prefWidth="900" prefHeight="600" style="-fx-background-color: #f4f6f8;">
+            prefWidth="900" prefHeight="650" style="-fx-background-color: #f4f6f8;">
     
     <top>
         <HBox style="-fx-background-color: white; -fx-padding: 15 30; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
@@ -22,18 +22,15 @@
             
             <VBox spacing="15">
                 <Label text="My Items" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #555;"/>
-                
                 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS" hbarPolicy="NEVER">
-                    <VBox fx:id="cartItemsContainer" spacing="10" style="-fx-background-color: #f4f6f8;">
-                        </VBox>
+                    <VBox fx:id="cartItemsContainer" spacing="10" style="-fx-background-color: #f4f6f8;"/>
                 </ScrollPane>
-                
                 <HBox alignment="CENTER_RIGHT">
                     <Button text="Clear Cart" onAction="#handleClearCart" style="-fx-text-fill: #d32f2f; -fx-background-color: transparent; -fx-cursor: hand;"/>
                 </HBox>
             </VBox>
             
-            <VBox spacing="20" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 0);">
+            <VBox spacing="15" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 0);">
                 <Label text="Order Summary" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #333;"/>
                 <Separator/>
                 
@@ -50,6 +47,13 @@
                     <Label text="Delivery Date" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
                     <DatePicker fx:id="deliveryDatePicker" maxWidth="Infinity"/>
                     <ComboBox fx:id="deliveryTimeCombo" promptText="Select Time Slot" maxWidth="Infinity"/>
+                </VBox>
+                
+                <!-- YENİ: ÖDEME YÖNTEMİ -->
+                <VBox spacing="5">
+                    <Label text="Payment Method" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <RadioButton fx:id="rbCreditCard" text="Credit Card (Online Payment)"/>
+                    <RadioButton fx:id="rbCash" text="Cash on Delivery"/>
                 </VBox>
                 
                 <Separator/>
@@ -79,5 +83,4 @@
             
         </SplitPane>
     </center>
-    
 </BorderPane>

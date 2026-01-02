@@ -2,69 +2,115 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefHeight="540.0" prefWidth="960.0" spacing="20.0"
-    style="-fx-background-color: linear-gradient(to bottom right, #e8f5e9, #ffffff);"
+<!-- BOYUT GÜNCELLENDİ: 1280x800 -->
+<StackPane prefHeight="800.0" prefWidth="1280.0"
+    style="-fx-background-color: linear-gradient(to bottom right, #667eea 0%, #764ba2 100%);"
     xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="com.group12.greengrocer.controllers.LoginController">
 
-    <Label text="GreenGrocer" textFill="#2e7d32">
-        <font>
-            <Font name="Segoe UI Bold" size="48.0" />
-        </font>
-    </Label>
+    <!-- ANA LOGIN PANELI (DAİRELER SİLİNDİ) -->
+    <VBox alignment="CENTER" spacing="30.0" fx:id="mainContainer"
+        style="-fx-background-color: rgba(255,255,255,0.98); -fx-background-radius: 20; -fx-padding: 50; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 30, 0, 0, 15);">
 
-    <Label text="Fresh Market System" textFill="#555555">
-        <font>
-            <Font size="18.0" />
-        </font>
-    </Label>
+        <!-- LOGO VE BAŞLIK -->
+        <VBox alignment="CENTER" spacing="10.0">
+            <ImageView fx:id="logoImage" fitHeight="100" fitWidth="100" preserveRatio="true">
+                <Image url="@../images/logo.png" />
+            </ImageView>
 
-    <VBox alignment="CENTER" maxWidth="350.0" spacing="15.0"
-        style="-fx-background-color: white; -fx-padding: 30; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);">
+            <Label text="🌿 GreenGrocer" textFill="#2e7d32" fx:id="titleLabel">
+                <font>
+                    <Font name="Segoe UI Bold" size="48.0" />
+                </font>
+            </Label>
 
-        <Label style="-fx-font-weight: bold; -fx-text-fill: #333;" text="Sign In" />
+            <Label text="Fresh • Quality • Fast Delivery" textFill="#666666" fx:id="subtitleLabel">
+                <font>
+                    <Font name="Segoe UI" size="18.0" />
+                </font>
+            </Label>
+        </VBox>
 
-        <TextField fx:id="usernameField" prefHeight="40.0" promptText="Username"
-            style="-fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;" />
+        <!-- LOGIN FORM -->
+        <VBox alignment="CENTER" spacing="20.0" maxWidth="450.0">
 
-        <!-- ŞİFRE ALANI DÜZELTİLDİ: StackPane eklendi -->
-        <javafx.scene.layout.StackPane>
-            <PasswordField fx:id="passwordField" prefHeight="40.0" promptText="Password"
-                style="-fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;" />
-            <!-- Bu satır eksikti, bu yüzden hata alıyordun: -->
-            <TextField fx:id="passwordTextField" managed="false" visible="false" prefHeight="40.0"
-                promptText="Password"
-                style="-fx-background-radius: 5; -fx-border-color: #ddd; -fx-border-radius: 5;" />
-        </javafx.scene.layout.StackPane>
+            <Label style="-fx-font-weight: bold; -fx-text-fill: #333; -fx-font-size: 28px;"
+                text="Welcome Back!" />
 
-        <!-- Checkbox eklemeyi unutma -->
-        <javafx.scene.control.CheckBox fx:id="showPasswordCheck"
-            onAction="#handlePasswordVisibility" text="Show Password" />
+            <!-- USERNAME FIELD -->
+            <VBox spacing="5.0" alignment="CENTER_LEFT">
+                <Label text="Username"
+                    style="-fx-text-fill: #555; -fx-font-weight: bold; -fx-font-size: 14px;" />
+                <TextField fx:id="usernameField" prefHeight="55.0" prefWidth="400.0"
+                    promptText="Enter your username"
+                    style="-fx-background-radius: 25; -fx-border-color: #ddd; -fx-border-radius: 25; -fx-padding: 0 25; -fx-font-size: 16px;" />
+            </VBox>
 
-        <Label fx:id="messageLabel" text="" wrapText="true" />
+            <!-- PASSWORD FIELD -->
+            <VBox spacing="5.0" alignment="CENTER_LEFT">
+                <Label text="Password"
+                    style="-fx-text-fill: #555; -fx-font-weight: bold; -fx-font-size: 14px;" />
+                <StackPane>
+                    <PasswordField fx:id="passwordField" prefHeight="55.0" prefWidth="400.0"
+                        promptText="Enter your password"
+                        style="-fx-background-radius: 25; -fx-border-color: #ddd; -fx-border-radius: 25; -fx-padding: 0 25; -fx-font-size: 16px;" />
+                    <TextField fx:id="passwordTextField" managed="false" visible="false"
+                        prefHeight="55.0" prefWidth="400.0"
+                        promptText="Enter your password"
+                        style="-fx-background-radius: 25; -fx-border-color: #ddd; -fx-border-radius: 25; -fx-padding: 0 25; -fx-font-size: 16px;" />
+                </StackPane>
+            </VBox>
 
-        <Button fx:id="loginButton" onAction="#handleLogin" prefHeight="45.0" prefWidth="300.0"
-            style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 5;"
-            text="LOGIN" />
+            <!-- SHOW PASSWORD CHECKBOX -->
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <CheckBox fx:id="showPasswordCheck" onAction="#handlePasswordVisibility" />
+                <Label text="Show Password" style="-fx-text-fill: #666; -fx-font-size: 14px;" />
+            </HBox>
 
-        <HBox alignment="CENTER" spacing="20.0">
-            <Hyperlink onAction="#switchToForgotPassword" text="Forgot Password?" textFill="#7f8c8d" />
+            <!-- MESSAGE LABEL -->
+            <Label fx:id="messageLabel" text="" wrapText="true" textFill="RED"
+                style="-fx-font-size: 14px;" />
+
+            <!-- LOGIN BUTTON -->
+            <Button fx:id="loginButton" onAction="#handleLogin" prefHeight="60.0" prefWidth="400.0"
+                style="-fx-background-color: linear-gradient(to right, #4CAF50, #45a049); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 18px; -fx-background-radius: 30; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(76,175,80,0.3), 5, 0, 0, 0);"
+                text="🚀 LOGIN" />
+
+            <!-- LOADING INDICATOR -->
+            <ProgressIndicator fx:id="loadingIndicator" prefWidth="40" prefHeight="40"
+                visible="false" style="-fx-progress-color: #4CAF50;" />
+            <HBox alignment="CENTER" spacing="20.0">
+                <Hyperlink onAction="#switchToForgotPassword" text="Forgot Password?"
+                    textFill="#7f8c8d" style="-fx-font-size: 14px;" />
+            </HBox>
+        </VBox>
+
+        <!-- REGISTER LINK -->
+        <HBox alignment="CENTER" spacing="5.0">
+            <Label text="Don't have an account?" textFill="#555" style="-fx-font-size: 14px;" />
+            <Button onAction="#switchToRegister"
+                style="-fx-background-color: transparent; -fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-cursor: hand; -fx-underline: true; -fx-font-size: 14px;"
+                text="Register Now" />
         </HBox>
+
+        <!-- FOOTER -->
+        <Label text="© 2026 GreenGrocer - Fresh Market System" textFill="#999"
+            style="-fx-font-size: 13px;" />
+
     </VBox>
 
-    <HBox alignment="CENTER" spacing="5.0">
-        <Label text="Don't have an account?" textFill="#555" />
-        <Button onAction="#switchToRegister"
-            style="-fx-background-color: transparent; -fx-text-fill: #2e7d32; -fx-font-weight: bold; -fx-cursor: hand; -fx-underline: true;"
-            text="Register Now" />
-    </HBox>
-
-</VBox>
+</StackPane>

@@ -11,7 +11,9 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -20,18 +22,17 @@ import java.io.IOException;
 
 public class LoginController {
 
-    @FXML
-    public TextField usernameField;
-    @FXML
-    public PasswordField passwordField;
-    @FXML
-    public TextField passwordTextField; // Görünür şifre için
-    @FXML
-    public CheckBox showPasswordCheck;
-    @FXML
-    public Label messageLabel;
-    @FXML
-    public Button loginButton;
+    @FXML public TextField usernameField;
+    @FXML public PasswordField passwordField;
+    @FXML public TextField passwordTextField;
+    @FXML public CheckBox showPasswordCheck;
+    @FXML public Label messageLabel;
+    @FXML public Button loginButton;
+    @FXML public ProgressIndicator loadingIndicator;
+    @FXML public ImageView logoImage;
+    @FXML public Label titleLabel;
+    @FXML public Label subtitleLabel;
+    @FXML public VBox mainContainer;
 
     private int loginAttempts = 0;
     private final int MAX_ATTEMPTS = 3;
@@ -47,7 +48,6 @@ public class LoginController {
             });
         }
 
-        // Hata veren kısım burasıydı, artık null olsa bile uygulama çökmez
         if (passwordTextField != null) {
             passwordTextField.setOnKeyPressed(event -> {
                 if (event.getCode() == KeyCode.ENTER)
@@ -59,7 +59,6 @@ public class LoginController {
     @FXML
     public void handleLogin() {
         String u = usernameField.getText().trim();
-        // Şifre kutusu veya görünür kutu hangisi aktifse onu al
         String p = showPasswordCheck.isSelected() ? passwordTextField.getText() : passwordField.getText();
 
         if (u.isEmpty() || p.isEmpty()) {
@@ -67,18 +66,33 @@ public class LoginController {
             return;
         }
 
-        User user = UserDAO.login(u, p);
+        startLoading();
 
-        if (user != null) {
-            openDashboard(user);
-        } else {
-            loginAttempts++;
-            if (loginAttempts >= MAX_ATTEMPTS) {
-                startLockout();
-            } else {
-                showError("Invalid credentials! Attempt: " + loginAttempts + "/" + MAX_ATTEMPTS);
+        new Thread(() -> {
+            try {
+                User user = UserDAO.login(u, p);
+
+                javafx.application.Platform.runLater(() -> {
+                    stopLoading();
+
+                    if (user != null) {
+                        openDashboard(user);
+                    } else {
+                        loginAttempts++;
+                        if (loginAttempts >= MAX_ATTEMPTS) {
+                            startLockout();
+                        } else {
+                            showError("Invalid credentials! Attempt: " + loginAttempts + "/" + MAX_ATTEMPTS);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    stopLoading();
+                    showError("Login failed: " + e.getMessage());
+                });
             }
-        }
+        }).start();
     }
 
     private void openDashboard(User user) {
@@ -109,11 +123,13 @@ public class LoginController {
                 title = "GreenGrocer Market - " + user.getUsername();
             }
 
-            // Mevcut pencerede sahneyi değiştir
             Stage stage = (Stage) loginButton.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setTitle(title);
-            stage.centerOnScreen();
+            
+            // Dashboard açılınca tam ekran yap
+            stage.setMaximized(true); 
+            
             stage.show();
 
         } catch (Exception e) {
@@ -138,9 +154,12 @@ public class LoginController {
         try {
             Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            // Ekran boyutunu korumak için (960x540)
-            stage.setScene(new Scene(root, 960, 540));
+            
+            // BURASI GÜNCELLENDİ: Daha büyük pencere (1280x800)
+            stage.setScene(new Scene(root, 1280, 800));
+            
             stage.setTitle(title);
+            stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
             showError("Error loading screen: " + fxmlPath);
@@ -196,5 +215,28 @@ public class LoginController {
     private void showError(String m) {
         messageLabel.setText(m);
         messageLabel.setTextFill(Color.RED);
+    }
+
+    private void startLoading() {
+        loginButton.setDisable(true);
+        usernameField.setDisable(true);
+        passwordField.setDisable(true);
+        passwordTextField.setDisable(true);
+        showPasswordCheck.setDisable(true);
+        loadingIndicator.setVisible(true);
+        loadingIndicator.setManaged(true);
+        messageLabel.setText("Logging in...");
+        messageLabel.setTextFill(Color.BLUE);
+    }
+
+    private void stopLoading() {
+        loginButton.setDisable(false);
+        usernameField.setDisable(false);
+        passwordField.setDisable(false);
+        passwordTextField.setDisable(false);
+        showPasswordCheck.setDisable(false);
+        loadingIndicator.setVisible(false);
+        loadingIndicator.setManaged(false);
+        messageLabel.setText("");
     }
 }
