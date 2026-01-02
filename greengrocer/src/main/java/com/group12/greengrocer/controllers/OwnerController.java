@@ -60,6 +60,21 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.TableCell;
 
+/**
+ * Controller class for the Store Owner (Admin) Dashboard.
+ * <p>
+ * This class serves as the central management hub for the application. It provides comprehensive
+ * control over the system, including:
+ * <ul>
+ * <li><b>Dashboard:</b> Real-time statistics and visual charts (Sales, Revenue, Performance).</li>
+ * <li><b>Inventory Management:</b> Adding, updating, and removing products.</li>
+ * <li><b>Order Management:</b> Monitoring all orders and filtering by status.</li>
+ * <li><b>Personnel Management:</b> Hiring and firing carriers (delivery drivers).</li>
+ * <li><b>Customer Support:</b> A chat interface to reply to customer tickets.</li>
+ * <li><b>Settings:</b> Managing discount coupons and loyalty program parameters.</li>
+ * <li><b>Reporting:</b> Generating financial/operational reports and exporting them to PDF.</li>
+ * </ul>
+ */
 public class OwnerController {
 
     private User currentUser;
@@ -69,7 +84,7 @@ public class OwnerController {
     @FXML
     private Label statusLabel;
 
-    // --- DASHBOARD ---
+    // --- DASHBOARD UI ELEMENTS ---
     @FXML
     private Label totalProductsLabel;
     @FXML
@@ -81,13 +96,13 @@ public class OwnerController {
     @FXML
     private TableView<Order> recentOrdersTable;
 
-    // --- PRODUCTS ---
+    // --- PRODUCT MANAGEMENT UI ---
     @FXML
     private TableView<Product> productsTable;
     @FXML
     private TextField productSearchField;
 
-    // --- ORDERS ---
+    // --- ORDER MANAGEMENT UI ---
     @FXML
     private TableView<Order> ordersTable;
     @FXML
@@ -95,28 +110,28 @@ public class OwnerController {
     @FXML
     private Label ordersCountLabel;
 
-    // --- CARRIERS ---
+    // --- CARRIER MANAGEMENT UI ---
     @FXML
     private TableView<User> carriersTable;
 
-    // --- MESSAGES (GELİŞMİŞ CHAT) ---
+    // --- MESSAGING SYSTEM UI ---
     @FXML
-    private ListView<String> chatTopicsList; // Konu başlıkları
+    private ListView<String> chatTopicsList; // List of active conversations
     @FXML
-    private VBox chatMessagesBox; // Mesaj balonları
+    private VBox chatMessagesBox; // Container for message bubbles
     @FXML
-    private ScrollPane chatScroll; // Scroll pane
+    private ScrollPane chatScroll; 
     @FXML
-    private TextField chatInput; // Mesaj girişi
+    private TextField chatInput; 
     @FXML
-    private Label chatCurrentTopicLabel; // Seçili konu
+    private Label chatCurrentTopicLabel; 
     @FXML
-    private Label chatCustomerNameLabel; // Müşteri adı
+    private Label chatCustomerNameLabel; 
     
     private String currentChatSubject = null;
     private int currentChatCustomerId = 0;
 
-    // --- SETTINGS (COUPONS & LOYALTY) ---
+    // --- SETTINGS UI ---
     @FXML
     private TableView<Coupon> couponsTable;
     @FXML
@@ -128,13 +143,13 @@ public class OwnerController {
     @FXML
     private TextField vatRateField;
 
-    // --- REPORTS ---
+    // --- REPORTING UI ---
     @FXML
     private ComboBox<String> reportTypeCombo;
     @FXML
     private VBox reportContentBox;
 
-    // --- DASHBOARD CHARTS ---
+    // --- CHARTS ---
     @FXML
     private VBox mostSoldProductsChart;
     @FXML
@@ -149,6 +164,12 @@ public class OwnerController {
     private ObservableList<Product> masterProductList = FXCollections.observableArrayList();
     private ObservableList<Order> masterOrderList = FXCollections.observableArrayList();
 
+    /**
+     * Initializes the controller with the logged-in user's data.
+     * Performs a security check to ensure the user has the 'OWNER' role.
+     *
+     * @param user The User object representing the logged-in admin.
+     */
     public void initData(User user) {
         if (!user.getRole().equalsIgnoreCase("OWNER")) {
             showAlert("Access Denied", "You are not authorized to access this panel.");
@@ -160,6 +181,11 @@ public class OwnerController {
         refreshAllData();
     }
 
+    /**
+     * Adds a listener to a TextField to prevent non-numeric input.
+     *
+     * @param field The TextField to restrict.
+     */
     private void allowOnlyPositiveNumbers(TextField field) {
         field.textProperty().addListener((obs, oldValue, newValue) -> {
             if (!newValue.matches("\\d*(\\.\\d*)?")) {
@@ -168,22 +194,26 @@ public class OwnerController {
         });
     }
 
+    /**
+     * Standard JavaFX initialize method.
+     * Sets up table columns, filters, and listeners for the UI components.
+     */
     @FXML
     private void initialize() {
         setupProductTable();
         setupOrderTable();
         setupCarrierTable();
-        setupCouponTable(); // Kupon tablosunu kur
-        setupRecentOrdersTable(); // Recent Orders tablosunu kur
+        setupCouponTable(); 
+        setupRecentOrdersTable(); 
 
-        // Sipariş Filtreleri
+        // Order Status Filters
         if (orderStatusFilter != null) {
             orderStatusFilter.getItems().addAll("All", "Pending", "Assigned", "Completed", "Cancelled");
             orderStatusFilter.getSelectionModel().selectFirst();
             orderStatusFilter.setOnAction(e -> filterOrders());
         }
 
-        // Rapor Tipleri
+        // Report Types
         if (reportTypeCombo != null) {
             reportTypeCombo.getItems().addAll("Product Revenue", "Carrier Performance", 
                 "Revenue by Time (Daily)", "Revenue by Time (Weekly)", "Revenue by Time (Monthly)", 
@@ -191,7 +221,7 @@ public class OwnerController {
             reportTypeCombo.getSelectionModel().selectFirst();
         }
 
-        // Chat Konu Listesi Seçim Listener
+        // Chat Topic Listener
         if (chatTopicsList != null) {
             chatTopicsList.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal != null)
@@ -200,6 +230,9 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Triggers a complete refresh of all data sections (Dashboard, Inventory, Orders, Carriers, etc.).
+     */
     private void refreshAllData() {
         loadDashboardStats();
         loadProducts();
@@ -211,7 +244,12 @@ public class OwnerController {
         statusLabel.setText("All data refreshed at " + LocalDateTime.now().toString().substring(11, 19));
     }
 
-    // --- DASHBOARD ---
+    // --- DASHBOARD SECTION ---
+
+    /**
+     * Loads high-level statistics (Total Revenue, Active Orders, etc.) for the dashboard summary.
+     * Populates the "Recent Orders" table with the latest transactions.
+     */
     private void loadDashboardStats() {
         try {
         int prodCount = ProductDAO.getAllProducts().size();
@@ -239,20 +277,30 @@ public class OwnerController {
 
         if (recentOrdersTable != null) {
             recentOrdersTable.setItems(recent);
-            // Debug için
+            // Debugging logs
             System.out.println("Recent orders loaded: " + recent.size());
             if (!recent.isEmpty()) {
                 System.out.println("First order: " + recent.get(0).getId() + " - " + recent.get(0).getCustomerName());
             }
         }
         
-        // Load charts
         loadDashboardCharts();
         } catch (Exception e) {
             showAlert("Error", "Failed to load dashboard stats: " + e.getMessage());
         }
     }
 
+    /**
+     * Fetches analytical data from the database and renders JavaFX Charts.
+     * Includes:
+     * <ul>
+     * <li>Most Sold Products (Bar Chart)</li>
+     * <li>Carrier Performance (Bar Chart)</li>
+     * <li>Order Intensity by Hour (Bar Chart)</li>
+     * <li>Most Active Customers (Bar Chart)</li>
+     * <li>Revenue by Category (Pie Chart)</li>
+     * </ul>
+     */
     private void loadDashboardCharts() {
         try {
             // Most Sold Products Chart
@@ -386,7 +434,12 @@ public class OwnerController {
         }
     }
 
-    // --- PRODUCTS ---
+    // --- PRODUCTS SECTION ---
+
+    /**
+     * Configures the product table columns.
+     * Applies custom CellFactories to color-code rows based on stock levels (Low Stock, Out of Stock).
+     */
     private void setupProductTable() {
         if (productsTable != null && !productsTable.getColumns().isEmpty()) {
             productsTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -396,7 +449,7 @@ public class OwnerController {
             productsTable.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("stock"));
             productsTable.getColumns().get(5).setCellValueFactory(new PropertyValueFactory<>("threshold"));
             
-            // Renklendirme için cell factory ekle
+            // Coloring for Price column
             if (productsTable.getColumns().size() > 6) {
                 TableColumn<Product, String> priceCol = (TableColumn<Product, String>) productsTable.getColumns().get(6);
                 priceCol.setCellValueFactory(data -> {
@@ -426,7 +479,7 @@ public class OwnerController {
                 });
             }
             
-            // Status column için renklendirme
+            // Status column with visual indicators
             if (productsTable.getColumns().size() > 7) {
                 TableColumn<Product, String> statusCol = (TableColumn<Product, String>) productsTable.getColumns().get(7);
                 statusCol.setCellValueFactory(data -> {
@@ -465,12 +518,18 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Reloads product data from the database into the master list.
+     */
     private void loadProducts() {
         masterProductList.setAll(ProductDAO.getAllProducts());
         if (productsTable != null)
             productsTable.setItems(masterProductList);
     }
 
+    /**
+     * Filters the product table based on the search query (Name or Type).
+     */
     @FXML
     private void handleSearchProducts() {
         String filter = productSearchField.getText().toLowerCase();
@@ -484,6 +543,10 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Opens a dialog to add a new product.
+     * Validates inputs (negative numbers, empty fields) and saves the product to the database.
+     */
     @FXML
     private void handleAddProduct() {
         Dialog<Boolean> dialog = new Dialog<>();
@@ -618,6 +681,9 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Deletes the selected product from the database after confirmation.
+     */
     @FXML
     private void handleRemoveProduct() {
         Product selected = productsTable.getSelectionModel().getSelectedItem();
@@ -648,6 +714,10 @@ public class OwnerController {
         });
     }
 
+    /**
+     * Opens a dialog to update an existing product.
+     * Pre-fills the dialog with current product details.
+     */
     @FXML
     private void handleUpdateProduct() {
         Product selected = productsTable.getSelectionModel().getSelectedItem();
@@ -715,7 +785,7 @@ public class OwnerController {
                     double stock = Double.parseDouble(stockField.getText());
                     double threshold = Double.parseDouble(thresholdField.getText());
 
-                    // Validasyonlar
+                    // Validations
                     if (name.isEmpty()) {
                         showAlert("Error", "Product name cannot be empty.");
                         return false;
@@ -737,7 +807,7 @@ public class OwnerController {
                         return false;
                     }
 
-                    // Aynı isim ve tip kontrolü (kendi ID'si hariç)
+                    // Check for duplicate name (excluding itself)
                     if (!name.equals(selected.getName()) || !type.equals(selected.getType())) {
                         if (ProductDAO.productExists(name, type)) {
                             showAlert("Error", "A product with this name and type already exists.");
@@ -781,7 +851,12 @@ public class OwnerController {
     }
 
 
-    // --- ORDERS ---
+    // --- ORDERS SECTION ---
+
+    /**
+     * Configures the main order table and color-codes rows based on order status.
+     * Colors: Pending (Orange), Assigned (Blue), Completed (Green), Cancelled (Red).
+     */
     private void setupOrderTable() {
         if (ordersTable != null && !ordersTable.getColumns().isEmpty()) {
             ordersTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -790,7 +865,7 @@ public class OwnerController {
             ordersTable.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("deliveryNeighborhood"));
             ordersTable.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("totalCost"));
             
-            // Status column için renklendirme
+            // Status column coloring
             if (ordersTable.getColumns().size() > 5) {
                 TableColumn<Order, String> statusCol = (TableColumn<Order, String>) ordersTable.getColumns().get(5);
                 statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -827,10 +902,13 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Sets up the "Recent Orders" table on the dashboard with abbreviated columns.
+     */
     private void setupRecentOrdersTable() {
         if (recentOrdersTable == null) return;
         
-        // Eğer sütunlar boşsa, önce sütunları oluştur
+        // If columns are missing, create them
         if (recentOrdersTable.getColumns().isEmpty()) {
             TableColumn<Order, Integer> idCol = new TableColumn<>("Order ID");
             idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -889,11 +967,10 @@ public class OwnerController {
             
             recentOrdersTable.getColumns().addAll(idCol, customerCol, totalCol, statusCol, dateCol);
         } else {
-            // Sütunlar varsa, sadece cell value factory'leri ayarla
+            // Re-bind if columns exist
             recentOrdersTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
             recentOrdersTable.getColumns().get(1).setCellValueFactory(new PropertyValueFactory<>("customerName"));
             
-            // Total column
             if (recentOrdersTable.getColumns().size() > 2) {
                 TableColumn<Order, String> totalCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(2);
                 totalCol.setCellValueFactory(data -> {
@@ -902,7 +979,6 @@ public class OwnerController {
                 });
             }
             
-            // Status column için renklendirme
             if (recentOrdersTable.getColumns().size() > 3) {
                 TableColumn<Order, String> statusCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(3);
                 statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -934,7 +1010,6 @@ public class OwnerController {
                 });
             }
             
-            // Date column
             if (recentOrdersTable.getColumns().size() > 4) {
                 TableColumn<Order, String> dateCol = (TableColumn<Order, String>) recentOrdersTable.getColumns().get(4);
                 dateCol.setCellValueFactory(data -> {
@@ -948,11 +1023,17 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Reloads all orders for the admin view.
+     */
     private void loadOrders() {
         masterOrderList.setAll(OrderDAO.getAllOrdersForAdmin());
         filterOrders();
     }
 
+    /**
+     * Filters the order list based on the selected status in the dropdown.
+     */
     private void filterOrders() {
         if (ordersTable == null)
             return;
@@ -976,7 +1057,8 @@ public class OwnerController {
         loadDashboardStats();
     }
 
-    // --- CARRIERS ---
+    // --- CARRIERS SECTION ---
+
     private void setupCarrierTable() {
         if (carriersTable != null && !carriersTable.getColumns().isEmpty()) {
             carriersTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -992,6 +1074,9 @@ public class OwnerController {
             carriersTable.setItems(carriers);
     }
 
+    /**
+     * Hires a new carrier (creates a user with 'CARRIER' role).
+     */
     @FXML
     private void handleHireCarrier() {
         Dialog<Boolean> dialog = new Dialog<>();
@@ -1010,7 +1095,7 @@ public class OwnerController {
         userField.setPromptText("Username");
         PasswordField passField = new PasswordField();
         passField.setPromptText("Password");
-        // DEĞİŞİKLİK BURADA BAŞLIYOR: Tek contact yerine iki alan
+        
         TextField emailField = new TextField();
         emailField.setPromptText("Email Address");
         TextField phoneField = new TextField();
@@ -1029,7 +1114,6 @@ public class OwnerController {
 
         dialog.setResultConverter(btn -> {
             if (btn == hireBtn) {
-                // UserDAO.addCarrier artık 4 parametre alıyor
                 return UserDAO.addCarrier(
                         userField.getText(),
                         passField.getText(),
@@ -1050,6 +1134,10 @@ public class OwnerController {
         });
     }
 
+    /**
+     * Fires a carrier (Deletes the user).
+     * Prevents deletion if the carrier has active/assigned orders.
+     */
     @FXML
     private void handleFireCarrier() {
         User selected = carriersTable.getSelectionModel().getSelectedItem();
@@ -1081,7 +1169,9 @@ public class OwnerController {
         }
     }
 
-    // --- CARRIER RATINGS (DETAYLI) ---
+    /**
+     * Views detailed ratings and performance metrics for a selected carrier.
+     */
     @FXML
     private void handleViewCarrierRatings() {
         User selected = carriersTable.getSelectionModel().getSelectedItem();
@@ -1146,7 +1236,11 @@ public class OwnerController {
         }
     }
 
-    // --- MESSAGES (GELİŞMİŞ CHAT SİSTEMİ) ---
+    // --- MESSAGING SYSTEM ---
+
+    /**
+     * Loads all customer conversations and groups them by customer and subject in the list view.
+     */
     private void loadMessages() {
         if (chatTopicsList == null) return;
         
@@ -1159,7 +1253,7 @@ public class OwnerController {
                 return;
             }
             
-            // Mesajları müşteri ve konuya göre grupla
+            // Group messages by "Customer - Subject"
             Map<String, List<Message>> grouped = allMsgs.stream()
                 .collect(java.util.stream.Collectors.groupingBy(msg -> 
                     msg.getSenderName() + " - " + msg.getSubject()));
@@ -1185,11 +1279,16 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Loads the chat history for a selected topic.
+     * Identifies the customer ID associated with the chat.
+     *
+     * @param selection The selected string from the topic list.
+     */
     private void loadChatMessages(String selection) {
         if (selection == null || chatMessagesBox == null) return;
         
         try {
-            // Seçilen satırdan müşteri adı ve konuyu ayır
             String[] parts = selection.split(" - ");
             if (parts.length < 2) return;
             
@@ -1201,7 +1300,7 @@ public class OwnerController {
             
             currentChatSubject = subject;
             
-            // Müşteri ID'sini bul
+            // Find Customer ID
             List<User> customers = UserDAO.getAllCustomers();
             for (User customer : customers) {
                 if (customer.getUsername().equals(customerName)) {
@@ -1217,7 +1316,6 @@ public class OwnerController {
             
             chatMessagesBox.getChildren().clear();
             
-            // Konuşmayı yükle
             List<Message> msgs = MessageDAO.getConversation(currentChatCustomerId, currentUser.getId());
             for (Message m : msgs) {
                 if (m.getSubject().equalsIgnoreCase(subject)) {
@@ -1226,7 +1324,7 @@ public class OwnerController {
                 }
             }
             
-            // Scroll'u en aşağı kaydır
+            // Auto scroll to bottom
             new java.util.Timer().schedule(new java.util.TimerTask() {
                 @Override
                 public void run() {
@@ -1240,6 +1338,13 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Adds a chat bubble to the message interface.
+     *
+     * @param text The message content.
+     * @param isMe True if sent by admin (Blue), False if by customer (White).
+     * @param timestamp The time of the message.
+     */
     private void addMessageBubble(String text, boolean isMe, String timestamp) {
         if (chatMessagesBox == null) return;
         
@@ -1253,7 +1358,7 @@ public class OwnerController {
         box.setPadding(new Insets(0, 0, 5, 0));
         
         if (isMe) {
-            // OWNER MESAJI (SAĞ) - Mavi
+            // OWNER MESSAGE (RIGHT) - Blue
             lbl.setStyle("-fx-background-color: #2196f3; " +
                          "-fx-background-radius: 15 15 0 15; " +
                          "-fx-text-fill: white; " +
@@ -1261,7 +1366,7 @@ public class OwnerController {
                          "-fx-font-family: 'Segoe UI'; -fx-font-size: 13px;");
             box.setAlignment(Pos.CENTER_RIGHT);
         } else {
-            // CUSTOMER MESAJI (SOL) - Beyaz
+            // CUSTOMER MESSAGE (LEFT) - White
             lbl.setStyle("-fx-background-color: #ffffff; " +
                          "-fx-background-radius: 15 15 15 0; " +
                          "-fx-text-fill: black; " +
@@ -1273,7 +1378,6 @@ public class OwnerController {
         box.getChildren().add(lbl);
         chatMessagesBox.getChildren().add(box);
         
-        // Otomatik scroll
         new java.util.Timer().schedule(new java.util.TimerTask() {
             @Override
             public void run() {
@@ -1344,6 +1448,7 @@ public class OwnerController {
     }
 
     // --- SETTINGS (COUPONS & LOYALTY) ---
+
     private void setupCouponTable() {
         if (couponsTable != null && !couponsTable.getColumns().isEmpty()) {
             couponsTable.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("code"));
@@ -1361,6 +1466,9 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Loads system settings like Loyalty Program parameters and Minimum Cart Value.
+     */
     private void loadSettings() {
         try {
             Integer[] loyalty = SettingsDAO.getLoyaltySettings();
@@ -1368,7 +1476,7 @@ public class OwnerController {
                 if (loyalty[0] != null) {
             minOrdersField.setText(String.valueOf(loyalty[0]));
                 } else {
-                    minOrdersField.setText(""); // Boş bırak
+                    minOrdersField.setText(""); 
                 }
             }
         if (loyaltyDiscountField != null)
@@ -1625,7 +1733,12 @@ public class OwnerController {
         }
     }
 
-    // --- REPORTS ---
+    // --- REPORTING SECTION ---
+
+    /**
+     * Generates a report preview in the UI based on the selected report type.
+     * Supported types: Revenue (Time/Amount), Product Revenue, Carrier Performance.
+     */
     @FXML
     private void handleGenerateReport() {
         String type = reportTypeCombo.getValue();
@@ -1637,23 +1750,23 @@ public class OwnerController {
         reportContentBox.getChildren().clear();
 
         try {
-            // Header - Resmi kağıt gibi
+            // Header
             VBox reportContainer = new VBox(10);
             reportContainer.setStyle("-fx-background-color: white; -fx-padding: 30;");
             
-            // Green Grocer Başlığı
+            // Green Grocer Title
             Label headerLabel = new Label("GREEN GROCER");
             headerLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2e7d32; -fx-alignment: center;");
             headerLabel.setAlignment(Pos.CENTER);
             headerLabel.setMaxWidth(Double.MAX_VALUE);
             
-            // Rapor Adı (Ortada)
+            // Report Name
             Label reportTitleLabel = new Label(type);
             reportTitleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #333; -fx-alignment: center;");
             reportTitleLabel.setAlignment(Pos.CENTER);
             reportTitleLabel.setMaxWidth(Double.MAX_VALUE);
             
-            // Tarih
+            // Date
             Label dateLabel = new Label("Date: " + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
             dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666; -fx-alignment: center;");
             dateLabel.setAlignment(Pos.CENTER);
@@ -1776,6 +1889,12 @@ public class OwnerController {
         }
     }
 
+    /**
+     * Exports the generated report data to a PDF file using iTextPDF library.
+     * Includes formatting for headers, dates, and data tables.
+     *
+     * @param file The destination file.
+     */
     private void saveReportToPDF(File file) {
         try {
             com.itextpdf.text.Document document = new com.itextpdf.text.Document();
@@ -1784,7 +1903,7 @@ public class OwnerController {
 
             String reportType = reportTypeCombo.getValue();
             
-            // Başlık - GREEN GROCER (En üst ortada)
+            // Header
             com.itextpdf.text.Font titleFont = com.itextpdf.text.FontFactory.getFont(
                 com.itextpdf.text.FontFactory.HELVETICA_BOLD, 32, com.itextpdf.text.BaseColor.GREEN);
             com.itextpdf.text.Paragraph title = new com.itextpdf.text.Paragraph("GREEN GROCER", titleFont);
@@ -1793,14 +1912,14 @@ public class OwnerController {
             
             document.add(new com.itextpdf.text.Paragraph(" "));
             
-            // Rapor Adı (Ortada)
+            // Report Title
             com.itextpdf.text.Font reportTitleFont = com.itextpdf.text.FontFactory.getFont(
                 com.itextpdf.text.FontFactory.HELVETICA_BOLD, 20, com.itextpdf.text.BaseColor.BLACK);
             com.itextpdf.text.Paragraph reportTitle = new com.itextpdf.text.Paragraph(reportType, reportTitleFont);
             reportTitle.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
             document.add(reportTitle);
             
-            // Tarih
+            // Date
             com.itextpdf.text.Font dateFont = com.itextpdf.text.FontFactory.getFont(
                 com.itextpdf.text.FontFactory.HELVETICA, 12, com.itextpdf.text.BaseColor.GRAY);
             com.itextpdf.text.Paragraph date = new com.itextpdf.text.Paragraph(
@@ -1813,7 +1932,7 @@ public class OwnerController {
             document.add(new com.itextpdf.text.Paragraph("--------------------------------"));
             document.add(new com.itextpdf.text.Paragraph(" "));
 
-            // Tablo verilerini al - reportContentBox'tan
+            // Get Table Data
             VBox box = (VBox) reportContentBox;
             List<ReportItem> reportItems = new java.util.ArrayList<>();
             
@@ -1829,7 +1948,7 @@ public class OwnerController {
                 }
             }
             
-            // Eğer tablo bulunamazsa, rapor tipine göre veriyi direkt al
+            // Fallback: If table is not in UI, fetch data again
             if (reportItems.isEmpty()) {
                 String type = reportType;
                 if (type.contains("Revenue by Time")) {
@@ -1854,12 +1973,12 @@ public class OwnerController {
                 noData.setAlignment(com.itextpdf.text.Paragraph.ALIGN_CENTER);
                 document.add(noData);
             } else {
-                // PDF Tablosu oluştur
+                // PDF Table
                 com.itextpdf.text.pdf.PdfPTable pdfTable = new com.itextpdf.text.pdf.PdfPTable(2);
                 pdfTable.setWidthPercentage(100);
                 pdfTable.setWidths(new float[]{3, 2});
                 
-                // Başlık satırı
+                // Headers
                 com.itextpdf.text.Font headerFont = com.itextpdf.text.FontFactory.getFont(
                     com.itextpdf.text.FontFactory.HELVETICA_BOLD, 12, com.itextpdf.text.BaseColor.WHITE);
                 com.itextpdf.text.pdf.PdfPCell headerCell1 = new com.itextpdf.text.pdf.PdfPCell(
@@ -1872,7 +1991,7 @@ public class OwnerController {
                 headerCell2.setBackgroundColor(com.itextpdf.text.BaseColor.DARK_GRAY);
                 pdfTable.addCell(headerCell2);
                 
-                // Veri satırları
+                // Data Rows
                 com.itextpdf.text.Font dataFont = com.itextpdf.text.FontFactory.getFont(
                     com.itextpdf.text.FontFactory.HELVETICA, 11, com.itextpdf.text.BaseColor.BLACK);
                 boolean alternate = false;
@@ -1916,14 +2035,16 @@ public class OwnerController {
         }
     }
 
-    // --- OTHER HANDLERS ---
+    /**
+     * Logs the admin out and returns to the login screen.
+     */
     @FXML 
     private void handleLogout() {
         try {
             Stage stage = (Stage) usernameLabel.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
             
-            // 1280x800 boyutunda aç
+            // 1280x800 resolution
             Scene scene = new Scene(root, 1200, 900);
             
             stage.setScene(scene);
@@ -1945,6 +2066,10 @@ public class OwnerController {
         alert.showAndWait();
     }
 
+    /**
+     * Helper inner class for report generation.
+     * Represents a single Key-Value pair row in the report table.
+     */
     public static class ReportItem {
         private String key;
         private String value;

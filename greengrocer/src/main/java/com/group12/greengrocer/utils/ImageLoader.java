@@ -8,21 +8,45 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Utility class responsible for batch loading product images into the database.
+ * <p>
+ * This class connects to the MySQL database and updates the 'image' BLOB column
+ * for existing products by reading image files from a specified local directory.
+ * It is intended to be run as a standalone script for database initialization or maintenance.
+ * </p>
+ * * @author Group12
+ */
 public class ImageLoader {
 
-    // Veritabanı Bilgileri
+    // Database Connection Constants
     private static final String URL = "jdbc:mysql://localhost:3306/greengrocer";
     private static final String USER = "myuser";
     private static final String PASS = "1234";
 
-    // Resimlerin olduğu klasör (Projenin resources klasörü)
-    // Eğer çalışmazsa tam dosya yolunu yaz: "C:/Users/Adın/Project/src/main/resources/images/"
+    /**
+     * The absolute path to the directory containing product images.
+     * <p>
+     * <b>Warning:</b> This path is hardcoded. Ensure this path exists on the machine
+     * running this code, or update it to match your project structure.
+     * </p>
+     */
     private static final String IMAGE_DIR = "C:\\Users\\mertf\\Documents\\CMPE343\\greengrocer\\src\\main\\resources\\images\\";
 
+    /**
+     * The main entry point for the image loading utility.
+     * <p>
+     * Executing this method will trigger the update process for a predefined list
+     * of products (Fruits and Vegetables). It maps Turkish product names to their
+     * corresponding image filenames.
+     * </p>
+     *
+     * @param args Command line arguments (not used).
+     */
     public static void main(String[] args) {
         System.out.println("Resim yükleme işlemi başlıyor...");
 
-        // Türkçe ürün isimleri ve karşılık gelen dosya adları (Türkçe karakter sorunu olmasın diye mapliyoruz)
+        // Vegetables
         updateImage("Domates", "domates.jpg");
         updateImage("Salatalık", "salatalik.jpg");
         updateImage("Biber", "biber.jpg");
@@ -36,6 +60,7 @@ public class ImageLoader {
         updateImage("Kabak", "kabak.jpg");
         updateImage("Sarımsak", "sarimsak.jpg");
 
+        // Fruits
         updateImage("Elma", "elma.jpg");
         updateImage("Armut", "armut.jpg");
         updateImage("Muz", "muz.jpg");
@@ -52,6 +77,17 @@ public class ImageLoader {
         System.out.println("İşlem Tamamlandı!");
     }
 
+    /**
+     * Updates the image for a specific product in the database.
+     * <p>
+     * This method reads the specified image file from {@code IMAGE_DIR}, converts it into
+     * a binary stream, and updates the 'image' column of the 'products' table where the
+     * product name matches the provided {@code productName}.
+     * </p>
+     *
+     * @param productName The name of the product in the database (e.g., "Domates").
+     * @param fileName    The filename of the image (e.g., "domates.jpg").
+     */
     private static void updateImage(String productName, String fileName) {
         String sql = "UPDATE products SET image = ? WHERE name = ?";
         File imageFile = new File(IMAGE_DIR + fileName);
@@ -65,7 +101,7 @@ public class ImageLoader {
              PreparedStatement ps = conn.prepareStatement(sql);
              FileInputStream fis = new FileInputStream(imageFile)) {
 
-            // Resmi binary stream olarak ayarla
+            // Set the image as a binary stream
             ps.setBinaryStream(1, fis, (int) imageFile.length());
             ps.setString(2, productName);
 

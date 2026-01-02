@@ -5,16 +5,30 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 /**
- * Handles database connections
+ * Manages the lifecycle of the JDBC database connection.
+ * <p>
+ * This utility class provides static methods to establish, retrieve, close,
+ * and test the connection to the database using configurations defined
+ * in {@link DatabaseConfig}.
+ * </p>
  */
 public class DatabaseConnection {
 
+    /**
+     * The single static connection instance shared across the application.
+     */
     private static Connection connection = null;
 
     /**
-     * Get database connection
-     * 
-     * @return Connection object
+     * Retrieves the active database connection.
+     * <p>
+     * This method implements a lazy initialization pattern. If the connection
+     * is null or closed, it attempts to load the JDBC driver and establish a
+     * new connection using the credentials from {@link DatabaseConfig}.
+     * </p>
+     *
+     * @return The active {@link Connection} object, or {@code null} if the
+     *         connection could not be established due to a driver or SQL error.
      */
     public static Connection getConnection() {
         try {
@@ -44,7 +58,11 @@ public class DatabaseConnection {
     }
 
     /**
-     * Close database connection
+     * Closes the current database connection safely.
+     * <p>
+     * It checks if the connection exists and is open before attempting to close it.
+     * Any {@code SQLException} occurring during this process is caught and logged.
+     * </p>
      */
     public static void closeConnection() {
         try {
@@ -59,9 +77,14 @@ public class DatabaseConnection {
     }
 
     /**
-     * Test database connection
-     * 
-     * @return true if connection successful
+     * Tests the validity of the database connection.
+     * <p>
+     * This method attempts to retrieve a connection instance and checks if it
+     * is open and valid.
+     * </p>
+     *
+     * @return {@code true} if a valid connection is established;
+     *         {@code false} otherwise.
      */
     public static boolean testConnection() {
         try {

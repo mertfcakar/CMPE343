@@ -29,9 +29,45 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
+/**
+ * Data Access Object (DAO) for managing Order-related database operations.
+ * <p>
+ * This class handles the complete lifecycle of an order, including:
+ * <ul>
+ * <li>Creating orders and managing transactional integrity (Order + Items + Stock update).</li>
+ * <li>Generating PDF invoices and storing them as BLOBs.</li>
+ * <li>Managing order status transitions (Pending -> Assigned -> Completed/Cancelled).</li>
+ * <li>Aggregating data for analytical reports and charts (Revenue, Performance, etc.).</li>
+ * <li>Handling carrier ratings and customer history.</li>
+ * </ul>
+ */
 public class OrderDAO {
 
-    // --- SİPARİŞ OLUŞTURMA ---
+    // --- ORDER CREATION ---
+
+    /**
+     * Creates a new order in the database.
+     * <p>
+     * This method executes a complex transaction:
+     * 1. Inserts the order record.
+     * 2. Checks product stock availability (locking rows for thread safety).
+     * 3. Inserts individual order items.
+     * 4. Updates (decrements) product stock levels.
+     * 5. Generates a PDF invoice and updates the order record with the BLOB.
+     * <p>
+     * If any step fails, the entire transaction is rolled back.
+     *
+     * @param user            The user placing the order.
+     * @param subtotal        The cost before tax and discounts.
+     * @param vat             The calculated VAT amount.
+     * @param discount        The discount amount applied.
+     * @param total           The final total cost.
+     * @param date            The requested delivery date.
+     * @param timeSlot        The requested delivery time slot string.
+     * @param paymentMethod   The selected payment method.
+     * @param loyaltyDiscount The amount deducted via loyalty points.
+     * @return true if the order was successfully created, false otherwise.
+     */
     public static boolean createOrder(User user, double subtotal, double vat, double discount, double total,
             LocalDate date, String timeSlot, String paymentMethod, double loyaltyDiscount) {
 
@@ -58,9 +94,9 @@ public class OrderDAO {
 
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
+            conn.setAutoCommit(false); // Start Transaction
 
-            // 1. Sipariş Kaydı
+            // 1. Register Order
             psOrder = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS);
             psOrder.setInt(1, user.getId());
             psOrder.setDouble(2, subtotal);
@@ -85,7 +121,7 @@ public class OrderDAO {
             psUpdateStock = conn.prepareStatement(updateStockSql);
             psItem = conn.prepareStatement(itemSql);
 
-            // 2. Ürünlerin Kaydı ve Stok Güncelleme
+            // 2. Register Items and Update Stock
             for (CartItem item : ShoppingCart.getInstance().getItems()) {
                 psCheck.setInt(1, item.getProduct().getId());
                 ResultSet rsStock = psCheck.executeQuery();
@@ -110,7 +146,7 @@ public class OrderDAO {
 
             psItem.executeBatch();
 
-            // PDF Fatura Oluştur ve Kaydet
+            // Generate and Save PDF Invoice
             byte[] pdfBytes = generateInvoicePDF(orderId, user, subtotal, vat, discount, loyaltyDiscount, total, ShoppingCart.getInstance().getItems());
             String updatePdfSql = "UPDATE orders SET invoice = ? WHERE id = ?";
             try (PreparedStatement psPdf = conn.prepareStatement(updatePdfSql)) {
@@ -119,7 +155,7 @@ public class OrderDAO {
                 psPdf.executeUpdate();
             }
 
-            conn.commit();
+            conn.commit(); // Commit Transaction
             return true;
 
         } catch (SQLException e) {
@@ -131,42 +167,43 @@ public class OrderDAO {
             e.printStackTrace();
             return false;
         } finally {
+            // Resource cleanup
             try {
-                if (rs != null)
-                    rs.close();
-            } catch (Exception e) {
-            }
+                if (rs != null) rs.close();
+            } catch (Exception e) {}
             try {
-                if (psOrder != null)
-                    psOrder.close();
-            } catch (Exception e) {
-            }
+                if (psOrder != null) psOrder.close();
+            } catch (Exception e) {}
             try {
-                if (psItem != null)
-                    psItem.close();
-            } catch (Exception e) {
-            }
+                if (psItem != null) psItem.close();
+            } catch (Exception e) {}
             try {
-                if (psCheck != null)
-                    psCheck.close();
-            } catch (Exception e) {
-            }
+                if (psCheck != null) psCheck.close();
+            } catch (Exception e) {}
             try {
-                if (psUpdateStock != null)
-                    psUpdateStock.close();
-            } catch (Exception e) {
-            }
+                if (psUpdateStock != null) psUpdateStock.close();
+            } catch (Exception e) {}
             try {
                 if (conn != null) {
                     conn.setAutoCommit(true);
                     conn.close();
                 }
-            } catch (Exception e) {
-            }
+            } catch (Exception e) {}
         }
     }
 
-    // --- KURYE PUANLAMA SİSTEMİ ---
+    // --- CARRIER RATING SYSTEM ---
+
+    /**
+     * Submits a rating for a carrier.
+     *
+     * @param orderId    The ID of the delivered order.
+     * @param carrierId  The ID of the carrier.
+     * @param customerId The ID of the customer providing the rating.
+     * @param rating     The score (1-5).
+     * @param comment    Optional comment.
+     * @return true if successful, false if already rated or error.
+     */
     public static boolean rateCarrier(int orderId, int carrierId, int customerId, int rating, String comment) {
         String checkSql = "SELECT id FROM carrier_ratings WHERE order_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -174,7 +211,7 @@ public class OrderDAO {
             ps.setInt(1, orderId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next())
-                    return false; // Zaten oylanmış
+                    return false; // Already rated
             }
         } catch (SQLException e) {
             return false;
@@ -225,7 +262,20 @@ public class OrderDAO {
         return false;
     }
 
-    // --- KURYE DASHBOARD VE YÖNETİMİ ---
+    // --- CARRIER DASHBOARD & MANAGEMENT ---
+
+    /**
+     * Retrieves the specific list of orders for the carrier dashboard.
+     * <p>
+     * The query logic includes:
+     * 1. 'Pending' orders in the pool (no carrier assigned) matching the carrier's neighborhood (or All).
+     * 2. 'Assigned' orders specifically for this carrier (My Active Deliveries).
+     * 3. 'Completed' orders by this carrier within the last 30 days (History).
+     *
+     * @param carrierId    The logged-in carrier's ID.
+     * @param neighborhood The carrier's designated working region filter.
+     * @return A list of relevant orders.
+     */
     public static List<Order> getCarrierDashboardOrders(int carrierId, String neighborhood) {
         List<Order> orders = new ArrayList<>();
         boolean isAllRegions = neighborhood == null || neighborhood.equalsIgnoreCase("All")
@@ -259,6 +309,9 @@ public class OrderDAO {
         return orders;
     }
 
+    /**
+     * Helper method to get a simplified text representation of order items for UI cards.
+     */
     public static List<String> getOrderItemsAsText(int orderId) {
         List<String> items = new ArrayList<>();
         String sql = "SELECT product_name, quantity FROM order_items WHERE order_id = ?";
@@ -275,18 +328,29 @@ public class OrderDAO {
         return items;
     }
 
+    /**
+     * Atomically assigns an order to a carrier and changes status to 'assigned'.
+     * Ensures concurrency control (two carriers cannot pick the same order).
+     */
     public static boolean assignAndPickUp(int orderId, int carrierId) {
         return executeUpdate(
                 "UPDATE orders SET carrier_id = ?, status = 'assigned' WHERE id = ? AND status = 'pending'", carrierId,
                 orderId);
     }
 
+    /**
+     * Releases an assigned order back to the 'pending' pool.
+     */
     public static boolean releaseOrderToPool(int orderId, int carrierId) {
         return executeUpdate(
                 "UPDATE orders SET carrier_id = NULL, status = 'pending' WHERE id = ? AND carrier_id = ? AND status = 'assigned'",
                 orderId, carrierId);
     }
 
+    /**
+     * Checks if a carrier has any currently assigned (incomplete) orders.
+     * Used to prevent deleting a carrier who has active jobs.
+     */
     public static boolean hasActiveOrders(int carrierId) {
         String sql = "SELECT COUNT(*) FROM orders WHERE carrier_id = ? AND status != 'completed'";
         try (Connection con = DatabaseConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
@@ -300,6 +364,9 @@ public class OrderDAO {
         return false;
     }
 
+    /**
+     * Marks an order as delivered/completed.
+     */
     public static boolean completeOrder(int orderId, int carrierId, LocalDateTime deliveryDateTime) {
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(
@@ -314,13 +381,17 @@ public class OrderDAO {
         }
     }
 
+    /**
+     * Reverts a completed order back to assigned status (Undo functionality).
+     */
     public static boolean undoCompleteOrder(int orderId, int carrierId) {
         return executeUpdate(
                 "UPDATE orders SET status = 'assigned', delivery_time = NULL WHERE id = ? AND carrier_id = ? AND status = 'completed'",
                 orderId, carrierId);
     }
 
-    // --- OWNER RAPORLARI ---
+    // --- OWNER REPORTS & ANALYTICS ---
+
     public static List<Order> getAllOrdersForAdmin() {
         return getList(
                 "SELECT o.*, u.username AS customer_name FROM orders o JOIN users u ON o.user_id = u.id ORDER BY o.order_time DESC");
@@ -348,38 +419,34 @@ public class OrderDAO {
         return 0;
     }
 
+    /**
+     * Aggregates total revenue grouped by product name.
+     */
     public static Map<String, Double> getRevenueByProductReport() {
         Map<String, Double> result = new HashMap<>();
-
         String sql = """
             SELECT p.name, SUM(oi.quantity * oi.price) AS revenue
             FROM order_items oi
             JOIN products p ON oi.product_id = p.id
             GROUP BY p.name
         """;
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) {
-                result.put(
-                    rs.getString("name"),
-                    rs.getDouble("revenue")
-                );
+                result.put(rs.getString("name"), rs.getDouble("revenue"));
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return result;
     }
 
-
+    /**
+     * Counts completed deliveries per carrier.
+     */
     public static Map<String, Integer> getCarrierPerformanceReport() {
         Map<String, Integer> result = new HashMap<>();
-
         String sql = """
             SELECT u.username, COUNT(o.id) AS completed_count
             FROM orders o
@@ -387,26 +454,18 @@ public class OrderDAO {
             WHERE o.status = 'Completed'
             GROUP BY u.username
         """;
-
         try (Connection conn = DatabaseConnection.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery()) {
-            
             while (rs.next()) {
-                result.put(
-                    rs.getString("username"),
-                    rs.getInt("completed_count")
-                );
+                result.put(rs.getString("username"), rs.getInt("completed_count"));
             }
-
         } catch (Exception e) {
-        
         }
-
         return result;
     }
 
-    // --- EN ÇOK SATILAN ÜRÜNLER (MİKTAR BAZLI) ---
+    // --- MOST SOLD PRODUCTS (QUANTITY BASED) ---
     public static Map<String, Double> getMostSoldProducts(int limit) {
         Map<String, Double> data = new HashMap<>();
         String sql = "SELECT p.name, SUM(oi.quantity) as total_quantity " +
@@ -431,7 +490,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- EN AKTİF MÜŞTERİLER ---
+    // --- MOST ACTIVE CUSTOMERS ---
     public static Map<String, Integer> getMostActiveCustomers(int limit) {
         Map<String, Integer> data = new HashMap<>();
         String sql = "SELECT u.username, COUNT(o.id) as order_count " +
@@ -455,7 +514,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- SİPARİŞ YOĞUNLUĞU (SAAT BAZLI) ---
+    // --- ORDER INTENSITY (HOUR BASED) ---
     public static Map<String, Integer> getOrderIntensityByHour() {
         Map<String, Integer> data = new HashMap<>();
         String sql = "SELECT HOUR(order_time) as hour, COUNT(*) as order_count " +
@@ -475,7 +534,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- SİPARİŞ YOĞUNLUĞU (GÜN BAZLI) ---
+    // --- ORDER INTENSITY (DAY BASED) ---
     public static Map<String, Integer> getOrderIntensityByDay() {
         Map<String, Integer> data = new HashMap<>();
         String sql = "SELECT DAYNAME(order_time) as day_name, COUNT(*) as order_count " +
@@ -494,7 +553,6 @@ public class OrderDAO {
         return data;
     }
 
-    // --- CARRIER ORTALAMA PERFORMANSI (RATING BAZLI) ---
     public static Map<String, Double> getCarrierAverageRatings() {
         Map<String, Double> data = new HashMap<>();
         String sql = "SELECT u.username, AVG(cr.rating) as avg_rating " +
@@ -513,7 +571,6 @@ public class OrderDAO {
         return data;
     }
 
-    // --- KATEGORİ BAZLI GELİR (VEGETABLE vs FRUIT) ---
     public static Map<String, Double> getRevenueByCategory() {
         Map<String, Double> data = new HashMap<>();
         String sql = "SELECT p.type, SUM(oi.total_price) as total_revenue " +
@@ -533,7 +590,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- ZAMAN BAZLI RAPORLAR ---
+    // --- TIME BASED REVENUE REPORTS ---
     public static Map<String, Double> getRevenueByTimeReport(String period) {
         Map<String, Double> data = new HashMap<>();
         String sql;
@@ -571,7 +628,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- PARA BAZLI RAPORLAR ---
+    // --- REVENUE BY AMOUNT RANGE ---
     public static Map<String, Double> getRevenueByAmountRange() {
         Map<String, Double> data = new HashMap<>();
         String sql = "SELECT " +
@@ -597,7 +654,7 @@ public class OrderDAO {
         return data;
     }
 
-    // --- MÜŞTERİ GEÇMİŞİ ---
+    // --- CUSTOMER HISTORY ---
     public static List<Order> getOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY order_time DESC";
@@ -614,8 +671,9 @@ public class OrderDAO {
         return orders;
     }
 
-    // --- YENİ EKLENEN KISIM (HATAYI ÇÖZEN YER) ---
-    // Resimli Sipariş Detaylarını Getir
+    /**
+     * Retrieves detailed order items including product images (BLOBs) for display.
+     */
     public static List<OrderDetail> getOrderDetailsWithImages(int orderId) {
         List<OrderDetail> details = new ArrayList<>();
         String sql = "SELECT oi.product_name, oi.quantity, oi.unit_price, oi.total_price, p.image " +
@@ -652,7 +710,6 @@ public class OrderDAO {
         return details;
     }
 
-    // Bu sınıf CustomerController tarafından kullanılacak
     public static class OrderDetail {
         public String name;
         public double quantity;
@@ -669,7 +726,7 @@ public class OrderDAO {
         }
     }
 
-    // --- YARDIMCILAR ---
+    // --- HELPERS ---
     private static boolean executeUpdate(String sql, int p1, int p2) {
         try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, p1);
@@ -719,7 +776,6 @@ public class OrderDAO {
         return order;
     }
 
-    // --- LOYALTY İÇİN TAMAMLANMIŞ SİPARİŞ SAYISI ---
     public static int getCompletedOrderCount(int userId) {
         String sql = "SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'completed'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -735,7 +791,14 @@ public class OrderDAO {
         return 0;
     }
 
-    // --- PDF FATURA OLUŞTUR ---
+    // --- PDF GENERATION (iText) ---
+
+    /**
+     * Generates a PDF invoice for the order using the iText library.
+     * The PDF is generated in memory as a byte array to be stored in the database.
+     *
+     * @return byte array containing the PDF data.
+     */
     private static byte[] generateInvoicePDF(int orderId, User user, double subtotal, double vat, double discount, double loyalty, double total, List<CartItem> items) {
         Document document = new Document();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -743,7 +806,7 @@ public class OrderDAO {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // Başlık
+            // Header
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 24, BaseColor.GREEN);
             Paragraph title = new Paragraph("GREEN GROCER", titleFont);
             title.setAlignment(Paragraph.ALIGN_CENTER);
@@ -756,7 +819,7 @@ public class OrderDAO {
 
             document.add(new Paragraph(" "));
 
-            // Fatura Bilgileri
+            // Invoice Details Table
             Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.BLACK);
             Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
 
@@ -764,7 +827,6 @@ public class OrderDAO {
             infoTable.setWidthPercentage(100);
             infoTable.setWidths(new float[]{1, 2});
 
-            // Sol taraf - Fatura Bilgileri
             PdfPCell cell = new PdfPCell(new Phrase("FATURA BİLGİLERİ", headerFont));
             cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
             cell.setColspan(2);
@@ -776,7 +838,6 @@ public class OrderDAO {
             infoTable.addCell(new Phrase("Tarih:", normalFont));
             infoTable.addCell(new Phrase(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), normalFont));
 
-            // Sağ taraf - Müşteri Bilgileri
             cell = new PdfPCell(new Phrase("MÜŞTERİ BİLGİLERİ", headerFont));
             cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
             cell.setColspan(2);
@@ -794,12 +855,11 @@ public class OrderDAO {
             document.add(infoTable);
             document.add(new Paragraph(" "));
 
-            // Ürünler Tablosu
+            // Product Table
             PdfPTable productTable = new PdfPTable(4);
             productTable.setWidthPercentage(100);
             productTable.setWidths(new float[]{4, 1, 2, 2});
 
-            // Tablo Başlıkları
             Font tableHeaderFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.WHITE);
             cell = new PdfPCell(new Phrase("Ürün", tableHeaderFont));
             cell.setBackgroundColor(BaseColor.DARK_GRAY);
@@ -817,7 +877,6 @@ public class OrderDAO {
             cell.setBackgroundColor(BaseColor.DARK_GRAY);
             productTable.addCell(cell);
 
-            // Ürün Satırları
             boolean alternate = false;
             for (CartItem item : items) {
                 BaseColor rowColor = alternate ? BaseColor.WHITE : new BaseColor(245, 245, 245);
@@ -843,7 +902,7 @@ public class OrderDAO {
             document.add(productTable);
             document.add(new Paragraph(" "));
 
-            // Toplam Tablosu
+            // Totals Table
             PdfPTable totalTable = new PdfPTable(2);
             totalTable.setWidthPercentage(50);
             totalTable.setHorizontalAlignment(PdfPTable.ALIGN_RIGHT);
@@ -868,7 +927,6 @@ public class OrderDAO {
                 totalTable.addCell(new Phrase(String.format("-%.2f TL", loyalty), totalFont));
             }
 
-            // Toplam satırı
             cell = new PdfPCell(new Phrase("GENEL TOPLAM:", totalBoldFont));
             cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
             totalTable.addCell(cell);
@@ -880,7 +938,6 @@ public class OrderDAO {
             document.add(totalTable);
             document.add(new Paragraph(" "));
 
-            // Footer
             Font footerFont = FontFactory.getFont(FontFactory.HELVETICA, 10, BaseColor.GRAY);
             Paragraph footer = new Paragraph("Teşekkür ederiz! Siparişiniz için GreenGrocer'ı tercih ettiğiniz için.", footerFont);
             footer.setAlignment(Paragraph.ALIGN_CENTER);
@@ -897,7 +954,13 @@ public class OrderDAO {
         return baos.toByteArray();
     }
 
-    // --- SİPARİŞ İPTALİ ---
+    /**
+     * Cancels a pending order and restores the stock levels of the items.
+     * This is a transactional operation.
+     *
+     * @param orderId The ID of the order to cancel.
+     * @return true if successfully canceled, false if order is not pending or error.
+     */
     public static boolean cancelOrder(int orderId) {
         String updateStatusSql = "UPDATE orders SET status = 'cancelled' WHERE id = ? AND status = 'pending'";
         String getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
@@ -911,14 +974,14 @@ public class OrderDAO {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
 
-            // Status güncelle
+            // Update status
             psStatus = conn.prepareStatement(updateStatusSql);
             psStatus.setInt(1, orderId);
             if (psStatus.executeUpdate() == 0) {
-                return false; // Zaten iptal edilmiş veya pending değil
+                return false; // Already cancelled or not pending
             }
 
-            // Ürünleri al ve stok geri yükle
+            // Restore Stock
             psItems = conn.prepareStatement(getItemsSql);
             psItems.setInt(1, orderId);
             rs = psItems.executeQuery();
@@ -951,7 +1014,6 @@ public class OrderDAO {
         }
     }
 
-    // --- SİPARİŞİ DEĞERLENDİR ---
     public static boolean rateOrder(int orderId, int rating) {
         String getOrderSql = "SELECT user_id, carrier_id FROM orders WHERE id = ?";
         String insertRatingSql = "INSERT INTO carrier_ratings (order_id, carrier_id, customer_id, rating) VALUES (?, ?, ?, ?)";
@@ -977,7 +1039,9 @@ public class OrderDAO {
         }
     }
 
-    // Order details'te PDF butonu ekleme
+    /**
+     * Retrieves the stored PDF invoice BLOB for a specific order.
+     */
     public static byte[] getInvoicePDF(int orderId) {
         String sql = "SELECT invoice FROM orders WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -994,7 +1058,9 @@ public class OrderDAO {
         return null;
     }
 
-    // --- KURYE DEĞERLENDİRMELERİNİ GETİR ---
+    /**
+     * Inner class to represent carrier rating data for display.
+     */
     public static class CarrierRating {
         public int orderId;
         public String customerName;

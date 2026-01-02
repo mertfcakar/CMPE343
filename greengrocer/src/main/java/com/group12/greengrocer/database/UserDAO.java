@@ -15,10 +15,18 @@ import com.group12.greengrocer.models.CartItem;
 import com.group12.greengrocer.models.User;
 import com.group12.greengrocer.utils.ShoppingCart;
 
+/**
+ * Data Access Object (DAO) for managing User-related database operations.
+ * This class handles CRUD operations for Users, Carriers, and Customers,
+ * as well as Order creation transactions.
+ */
 public class UserDAO {
 
     /**
-     * GÜNCELLENDİ: Kullanıcı girişi. Email ve Telefon sütunlarını çeker.
+     * Authenticates a user based on their username and password.
+     * * @param username The username of the user.
+     * @param password The raw password of the user.
+     * @return A {@link User} object if credentials are correct, or null if login fails.
      */
     public static User login(String username, String password) {
         String sql = "SELECT * FROM users WHERE BINARY username = ? AND BINARY password = ?";
@@ -37,20 +45,23 @@ public class UserDAO {
                         rs.getString("password"),
                         rs.getString("role"),
                         rs.getString("address"),
-                        rs.getString("email"),       // contact_details yerine email
-                        rs.getString("phone_number"),// contact_details yerine phone
+                        rs.getString("email"),       
+                        rs.getString("phone_number"),
                         rs.getString("neighborhood")
                     );
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Login İşlemi Sırasında Hata: " + e.getMessage());
+            System.err.println("Error during login operation: " + e.getMessage());
         }
         return null;
     }
 
     /**
-     * Kullanıcı var mı kontrolü (Kayıt sırasında çakışmayı önlemek için).
+     * Checks if a user with the given username already exists in the database.
+     * Useful for preventing duplicate registrations.
+     * * @param username The username to check.
+     * @return true if the user exists, false otherwise.
      */
     public static boolean isUserExists(String username) {
         String sql = "SELECT COUNT(*) FROM users WHERE BINARY username = ?";
@@ -63,13 +74,20 @@ public class UserDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Kullanıcı Sorgulama Hatası: " + e.getMessage());
+            System.err.println("Error checking user existence: " + e.getMessage());
         }
         return false;
     }
 
     /**
-     * GÜNCELLENDİ: Müşteri Kaydı (Register). Artık Email ve Telefon ayrı ayrı alınıyor.
+     * Registers a new customer into the database.
+     * * @param username     The desired username.
+     * @param password     The password.
+     * @param address      The physical delivery address.
+     * @param neighborhood The neighborhood region.
+     * @param email        The customer's email address.
+     * @param phone        The customer's phone number.
+     * @return true if the registration was successful, false otherwise.
      */
     public static boolean registerCustomer(String username, String password, String address, String neighborhood, String email, String phone) {
         String sql = "INSERT INTO users (username, password, role, address, neighborhood, email, phone_number) VALUES (?, ?, 'customer', ?, ?, ?, ?)";
@@ -93,8 +111,13 @@ public class UserDAO {
     }
 
     /**
-     * YENİ EKLENDİ: Şifremi Unuttum (Güvenli)
-     * Kullanıcı adı + Email + Telefon eşleşirse şifre değişir.
+     * Securely resets a user's password.
+     * Requires the username, email, and phone number to match the database record.
+     * * @param username    The user's username.
+     * @param email       The registered email address.
+     * @param phone       The registered phone number.
+     * @param newPassword The new password to set.
+     * @return true if the password was updated, false if the verification details were incorrect.
      */
     public static boolean resetPasswordSecure(String username, String email, String phone, String newPassword) {
         String sql = "UPDATE users SET password = ? WHERE BINARY username = ? AND email = ? AND phone_number = ?";
@@ -107,7 +130,7 @@ public class UserDAO {
             ps.setString(3, email);
             ps.setString(4, phone);
             
-            return ps.executeUpdate() > 0; // 0 dönerse bilgiler uyuşmuyor demektir.
+            return ps.executeUpdate() > 0; 
             
         } catch (SQLException e) {
             e.printStackTrace();
@@ -115,10 +138,11 @@ public class UserDAO {
         }
     }
 
-    // --- OWNER (PATRON) İŞLEMLERİ ---
+    // --- OWNER OPERATIONS ---
 
     /**
-     * GÜNCELLENDİ: Tüm kuryeleri getirirken yeni User yapısını kullanır.
+     * Retrieves all users with the 'carrier' role.
+     * * @return A list of User objects representing carriers.
      */
     public static List<User> getAllCarriers() {
         List<User> carriers = new ArrayList<>();
@@ -146,10 +170,12 @@ public class UserDAO {
     }
 
     /**
-     * GÜNCELLENDİ: Kurye eklerken email ve telefon zorunluluğu veritabanında olduğu için
-     * bu metodu güncelledim. Eğer OwnerController'dan tek bir 'contact' geliyorsa
-     * onu 'phone' kabul edip, maile geçici bir değer atayabiliriz veya o tarafı da güncelleyebiliriz.
-     * Şimdilik: Email ve Phone parametresi alacak şekilde güncelledim.
+     * Adds a new carrier to the system.
+     * * @param username The carrier's username.
+     * @param password The carrier's password.
+     * @param email    The carrier's email address.
+     * @param phone    The carrier's phone number.
+     * @return true if the carrier was added successfully.
      */
     public static boolean addCarrier(String username, String password, String email, String phone) {
         String sql = "INSERT INTO users (username, password, role, email, phone_number) VALUES (?, ?, 'carrier', ?, ?)";
@@ -166,6 +192,11 @@ public class UserDAO {
         }
     }
 
+    /**
+     * Deletes a user from the database by their unique ID.
+     * * @param userId The ID of the user to delete.
+     * @return true if the user was deleted successfully.
+     */
     public static boolean deleteUser(int userId) {
         String sql = "DELETE FROM users WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -178,7 +209,24 @@ public class UserDAO {
         }
     }
 
-    // --- SİPARİŞ OLUŞTURMA (SENİN ORİJİNAL KODUN) ---
+    // --- ORDER CREATION ---
+
+    /**
+     * Creates a new order and saves all order items in a single transaction.
+     * <p>
+     * This method uses JDBC Transaction management (setAutoCommit(false)).
+     * If saving the order or any of the items fails, the entire operation is rolled back
+     * to ensure data integrity.
+     * </p>
+     * * @param user     The user placing the order.
+     * @param subtotal The subtotal amount before taxes/discounts.
+     * @param vat      The calculated VAT amount.
+     * @param discount The calculated discount amount.
+     * @param total    The final total cost.
+     * @param date     The requested delivery date.
+     * @param timeSlot The requested delivery time slot (Format expected: "HH:mm - HH:mm").
+     * @return true if the order is successfully created, false otherwise.
+     */
     public static boolean createOrder(User user, double subtotal, double vat, double discount, double total, 
                                       LocalDate date, String timeSlot) {
         
@@ -189,6 +237,7 @@ public class UserDAO {
         String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price) " +
                          "VALUES (?, ?, ?, ?, ?, ?)";
 
+        // Parse time slot (Expects format like "09:00 - 11:00")
         String startTime = timeSlot.split(" - ")[0];
         if (startTime.length() == 4) startTime = "0" + startTime; 
         
@@ -201,9 +250,9 @@ public class UserDAO {
 
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); 
+            conn.setAutoCommit(false); // Begin Transaction
 
-            // 1. Siparişi Kaydet
+            // 1. Save the Order Header
             psOrder = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS);
             psOrder.setInt(1, user.getId());
             psOrder.setDouble(2, subtotal);
@@ -225,7 +274,7 @@ public class UserDAO {
                 throw new SQLException("Creating order failed, no ID obtained.");
             }
 
-            // 2. Ürünleri Kaydet
+            // 2. Save Order Items (Batch Processing)
             psItem = conn.prepareStatement(itemSql);
             for (CartItem item : ShoppingCart.getInstance().getItems()) {
                 psItem.setInt(1, orderId);
@@ -238,7 +287,7 @@ public class UserDAO {
             }
             psItem.executeBatch();
 
-            conn.commit(); 
+            conn.commit(); // Commit Transaction
             return true;
 
         } catch (SQLException e) {
@@ -254,7 +303,13 @@ public class UserDAO {
     }
 
     /**
-     * GÜNCELLENDİ: Profil güncelleme artık mail ve telefonu ayrı günceller.
+     * Updates the user's profile information.
+     * * @param userId      The ID of the user to update.
+     * @param newAddress  The new address.
+     * @param newEmail    The new email address.
+     * @param newPhone    The new phone number.
+     * @param newPassword The new password.
+     * @return true if the update was successful.
      */
     public static boolean updateUserProfile(int userId, String newAddress, String newEmail, String newPhone, String newPassword) {
         String sql = "UPDATE users SET address = ?, email = ?, phone_number = ?, password = ? WHERE id = ?";
@@ -269,6 +324,11 @@ public class UserDAO {
         } catch (SQLException e) { return false; }
     }
 
+    /**
+     * Retrieves the ID of the store owner.
+     * Assumes there is only one user with the 'owner' role.
+     * * @return The ID of the owner, or 0 if not found.
+     */
     public static int getOwnerId() {
         String sql = "SELECT id FROM users WHERE role = 'owner' LIMIT 1";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -280,7 +340,8 @@ public class UserDAO {
     }
 
     /**
-     * Tüm müşterileri getir
+     * Retrieves all users with the 'customer' role.
+     * * @return A list of User objects representing customers.
      */
     public static List<User> getAllCustomers() {
         List<User> customers = new ArrayList<>();

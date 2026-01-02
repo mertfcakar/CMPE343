@@ -11,19 +11,42 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 import java.io.IOException;
 
+/**
+ * Controller class for the Forgot Password screen.
+ * This class handles user identity verification and password reset operations
+ * by interacting with the {@link UserDAO}.
+ * * @author Group12
+ * @version 1.0
+ */
 public class ForgotPasswordController {
 
+    /** Field for the user to enter their unique username. */
     @FXML
     private TextField usernameField;
+
+    /** Field for the user to enter their registered email address. */
     @FXML
     private TextField emailField;
+
+    /** Field for the user to enter their registered phone number. */
     @FXML
     private TextField phoneField;
+
+    /** Field for the user to enter their new desired password. */
     @FXML
     private PasswordField newPasswordField;
+
+    /** Label used to display error or success messages to the user. */
     @FXML
     private Label statusLabel;
 
+    /**
+     * Processes the password reset request.
+     * Validates that all fields are filled and that the password meets the minimum length.
+     * If the verification details match the database records, the password is updated.
+     *
+     * @param event The action event triggered by clicking the reset button.
+     */
     @FXML
     private void handleResetPassword(ActionEvent event) {
         String user = usernameField.getText().trim();
@@ -31,19 +54,21 @@ public class ForgotPasswordController {
         String phone = phoneField.getText().trim();
         String newPass = newPasswordField.getText();
 
+        // Validation: Check for empty fields
         if (user.isEmpty() || email.isEmpty() || phone.isEmpty() || newPass.isEmpty()) {
             statusLabel.setText("All fields are required!");
             statusLabel.setStyle("-fx-text-fill: red;");
             return;
         }
 
+        // Validation: Password length check
         if (newPass.length() < 4) {
             statusLabel.setText("Password too short (min 4 chars).");
             statusLabel.setStyle("-fx-text-fill: red;");
             return;
         }
 
-        // Veritabanı Kontrolü ve Güncelleme
+        // Database operation: Attempt to reset password
         boolean success = UserDAO.resetPasswordSecure(user, email, phone, newPass);
 
         if (success) {
@@ -58,6 +83,12 @@ public class ForgotPasswordController {
         }
     }
 
+    /**
+     * Redirects the user back to the login screen.
+     * Loads the login FXML file and updates the current stage.
+     *
+     * @param event The action event triggered by the back button or successful reset.
+     */
     @FXML
     private void switchToLogin(ActionEvent event) {
         try {
