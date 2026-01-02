@@ -58,11 +58,18 @@ public class Order {
      * Calculates the earnings for the carrier based on the order's total cost.
      * <p>
      * <b>Calculation Logic:</b>
+<<<<<<< HEAD
      * </p>
+=======
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
      * <ul>
      * <li>Base Fee: 25.00 TL</li>
      * <li>Commission: 5% of the {@code totalCost}</li>
      * </ul>
+<<<<<<< HEAD
+=======
+     * </p>
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
      *
      * @return The calculated earning amount for the carrier (Base Fee + Commission).
      */

@@ -87,6 +87,7 @@ public class LoginController {
      * Handles the login process when the user clicks the login button or presses Enter.
      * <p>
      * Workflow:
+<<<<<<< HEAD
      * </p>
      * <ol>
      * <li>Validates that fields are not empty.</li>
@@ -95,6 +96,16 @@ public class LoginController {
      * <li>On success: Redirects to the dashboard via {@link #openDashboard(User)}.</li>
      * <li>On failure: Increments retry counter and triggers {@link #startLockout()} if limit reached.</li>
      * </ol>
+=======
+     * <ol>
+     *   <li>Validates that fields are not empty.</li>
+     *   <li>Disables UI and shows loading indicator.</li>
+     *   <li>Performs authentication in a background thread to prevent UI freezing.</li>
+     *   <li>On success: Redirects to the dashboard via {@link #openDashboard(User)}.</li>
+     *   <li>On failure: Increments retry counter and triggers {@link #startLockout()} if limit reached.</li>
+     * </ol>
+     * </p>
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
      */
     @FXML
     public void handleLogin() {

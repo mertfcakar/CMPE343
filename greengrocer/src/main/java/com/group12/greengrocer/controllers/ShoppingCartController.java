@@ -27,13 +27,20 @@ import java.util.List;
  * Controller class for the Shopping Cart and Checkout screen.
  * <p>
  * This class manages the user's shopping cart interactions, including:
+<<<<<<< HEAD
  * </p>
+=======
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
  * <ul>
  * <li>Dynamically rendering cart items using a VBox layout.</li>
  * <li>Adjusting item quantities and removing items.</li>
  * <li>Calculating totals including VAT, coupon discounts, and loyalty rewards.</li>
  * <li>Handling the final checkout process and order creation.</li>
  * </ul>
+<<<<<<< HEAD
+=======
+ * </p>
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
  *
  * @author Group12
  * @version 1.0
@@ -301,14 +308,20 @@ public class ShoppingCartController {
      * Processes the final checkout.
      * <p>
      * Validations performed:
+<<<<<<< HEAD
      * </p>
+=======
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
      * <ul>
      * <li>Cart is not empty.</li>
      * <li>Delivery date and time are selected.</li>
      * <li>Payment method is selected.</li>
      * <li>Total amount meets the minimum cart value (50 TL).</li>
      * </ul>
+<<<<<<< HEAD
      * <p>
+=======
+>>>>>>> b229e1c6e1976ed596a3e61a4421e674003c0746
      * If validation passes, creates the order via {@link OrderDAO} and clears the cart.
      * </p>
      */
