@@ -150,9 +150,22 @@ public class OwnerController {
     private ObservableList<Order> masterOrderList = FXCollections.observableArrayList();
 
     public void initData(User user) {
+        if (!user.getRole().equalsIgnoreCase("OWNER")) {
+            showAlert("Access Denied", "You are not authorized to access this panel.");
+            return;
+        }
+
         this.currentUser = user;
         usernameLabel.setText("Owner: " + user.getUsername());
         refreshAllData();
+    }
+
+    private void allowOnlyPositiveNumbers(TextField field) {
+        field.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*(\\.\\d*)?")) {
+                field.setText(oldValue);
+            }
+        });
     }
 
     @FXML
@@ -487,15 +500,23 @@ public class OwnerController {
 
         TextField nameField = new TextField();
         nameField.setPromptText("Name");
+
         ComboBox<String> typeCombo = new ComboBox<>();
         typeCombo.getItems().addAll("vegetable", "fruit");
         typeCombo.setValue("vegetable");
+
         TextField priceField = new TextField();
         priceField.setPromptText("Price");
+
         TextField stockField = new TextField();
         stockField.setPromptText("Stock");
+
         TextField thresholdField = new TextField();
         thresholdField.setPromptText("Threshold");
+
+        allowOnlyPositiveNumbers(priceField);
+        allowOnlyPositiveNumbers(stockField);
+        allowOnlyPositiveNumbers(thresholdField);
 
         Button imgBtn = new Button("Select Image");
         Label imgLabel = new Label("No file selected");
@@ -503,7 +524,9 @@ public class OwnerController {
 
         imgBtn.setOnAction(e -> {
             FileChooser fc = new FileChooser();
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.jpg", "*.png", "*.jpeg"));
+            fc.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Images", "*.jpg", "*.png", "*.jpeg")
+            );
             File f = fc.showOpenDialog(dialog.getOwner());
             if (f != null) {
                 selectedFile[0] = f;
@@ -573,7 +596,8 @@ public class OwnerController {
                             price,
                             stock,
                             threshold,
-                            selectedFile[0]);
+                            selectedFile[0]
+                    );
 
                 } catch (NumberFormatException e) {
                     showAlert("Error", "Please enter valid numeric values.");
@@ -755,6 +779,7 @@ public class OwnerController {
             showAlert("Success", "Product updated successfully.");
         }
     }
+
 
     // --- ORDERS ---
     private void setupOrderTable() {

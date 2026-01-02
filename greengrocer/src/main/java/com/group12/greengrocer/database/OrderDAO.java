@@ -1,5 +1,6 @@
 package com.group12.greengrocer.database;
 
+import java.io.ByteArrayOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,21 +19,15 @@ import com.group12.greengrocer.models.CartItem;
 import com.group12.greengrocer.models.Order;
 import com.group12.greengrocer.models.User;
 import com.group12.greengrocer.utils.ShoppingCart;
-
-// PDF için
-import com.itextpdf.text.Document;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.PdfWriter;
-import java.io.ByteArrayOutputStream;
-
-// PDF için ek importlar
 import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Document;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Image;
+import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.Phrase;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
 
 public class OrderDAO {
 
@@ -354,27 +349,61 @@ public class OrderDAO {
     }
 
     public static Map<String, Double> getRevenueByProductReport() {
-        Map<String, Double> data = new HashMap<>();
+        Map<String, Double> result = new HashMap<>();
+
+        String sql = """
+            SELECT p.name, SUM(oi.quantity * oi.price) AS revenue
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            GROUP BY p.name
+        """;
+
         try (Connection conn = DatabaseConnection.getConnection();
-                ResultSet rs = conn.createStatement().executeQuery(
-                        "SELECT p.name, SUM(oi.total_price) as total FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN orders o ON oi.order_id = o.id WHERE o.status = 'completed' GROUP BY p.name ORDER BY total DESC")) {
-            while (rs.next())
-                data.put(rs.getString("name"), rs.getDouble("total"));
-        } catch (SQLException e) {
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                result.put(
+                    rs.getString("name"),
+                    rs.getDouble("revenue")
+                );
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return data;
+
+        return result;
     }
 
+
     public static Map<String, Integer> getCarrierPerformanceReport() {
-        Map<String, Integer> data = new HashMap<>();
+        Map<String, Integer> result = new HashMap<>();
+
+        String sql = """
+            SELECT u.username, COUNT(o.id) AS completed_count
+            FROM orders o
+            JOIN users u ON o.carrier_id = u.id
+            WHERE o.status = 'Completed'
+            GROUP BY u.username
+        """;
+
         try (Connection conn = DatabaseConnection.getConnection();
-                ResultSet rs = conn.createStatement().executeQuery(
-                        "SELECT u.username, COUNT(o.id) as delivery_count FROM orders o JOIN users u ON o.carrier_id = u.id WHERE o.status = 'completed' GROUP BY u.username")) {
-            while (rs.next())
-                data.put(rs.getString("username"), rs.getInt("delivery_count"));
-        } catch (SQLException e) {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                result.put(
+                    rs.getString("username"),
+                    rs.getInt("completed_count")
+                );
+            }
+
+        } catch (Exception e) {
+        
         }
-        return data;
+
+        return result;
     }
 
     // --- EN ÇOK SATILAN ÜRÜNLER (MİKTAR BAZLI) ---

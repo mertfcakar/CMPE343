@@ -73,7 +73,7 @@ public class ProductDAO {
         if (productExists(name, type)) {
             return false;
         }
-        String sql = "INSERT INTO products (name, type, price, stock, threshold, image) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO products (name, type, price, stock, threshold, image, image_type) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -84,13 +84,15 @@ public class ProductDAO {
             ps.setDouble(4, stock);
             ps.setDouble(5, threshold);
 
-            // Resim dosyasını Binary Stream olarak gönderiyoruz
             if (imageFile != null) {
                 FileInputStream fis = new FileInputStream(imageFile);
                 ps.setBinaryStream(6, fis, (int) imageFile.length());
+                ps.setString(7, getFileExtension(imageFile.getName()));
             } else {
-                ps.setBinaryStream(6, null);
+                ps.setNull(6, java.sql.Types.BLOB);
+                ps.setNull(7, java.sql.Types.VARCHAR);
             }
+
 
             return ps.executeUpdate() > 0;
 
@@ -99,6 +101,7 @@ public class ProductDAO {
             return false;
         }
     }
+
 
     // ÜRÜN SİL (SOFT DELETE - is_active = FALSE yapılır)
     public static boolean deleteProduct(int productId) {
@@ -161,4 +164,13 @@ public class ProductDAO {
             return false;
         }
     }
+
+    private static String getFileExtension(String fileName) {
+        int index = fileName.lastIndexOf('.');
+        if (index > 0) {
+            return fileName.substring(index + 1);
+        }
+        return "";
+    }
+
 }
