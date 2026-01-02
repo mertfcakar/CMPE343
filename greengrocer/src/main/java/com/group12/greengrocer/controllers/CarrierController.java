@@ -34,14 +34,32 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/**
+ * Controller class for the Carrier (Delivery Driver) Dashboard.
+ * <p>
+ * This class manages the user interface and logic for the carrier's workflow, including:
+ * <ul>
+ * <li>Viewing available orders in the pool.</li>
+ * <li>Picking up orders for delivery.</li>
+ * <li>Marking orders as completed/delivered.</li>
+ * <li>Filtering orders by neighborhood and time.</li>
+ * <li>Tracking earnings and delivery statistics.</li>
+ * <li>Undoing recent actions.</li>
+ * </ul>
+ */
 public class CarrierController {
 
+    // UI Containers for different order statuses
     @FXML
     private VBox availableDeliveriesBox, currentDeliveriesBox, completedDeliveriesBox;
+    
+    // UI Filters and inputs
     @FXML
     private ComboBox<String> neighborhoodCombo, completedFilterCombo;
     @FXML
     private TextField searchField;
+    
+    // Statistics and Info Labels
     @FXML
     private Label lblActiveOrders, lblTotalEarnings, lblAvgSpeed, lblUsername, lblCarrierRegion;
     @FXML
@@ -49,17 +67,27 @@ public class CarrierController {
     @FXML
     private Label notificationLabel;
 
+    /** The currently logged-in carrier user. */
     private User currentUser;
+    
+    /** Local cache of all orders relevant to this carrier context. */
     private List<Order> allOrders;
 
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
+    /** Stack to keep track of actions for the global "Undo" functionality. */
     private Stack<ActionRecord> historyStack = new Stack<>();
 
+    /**
+     * Enumeration representing the types of actions a carrier can perform.
+     */
     private enum ActionType {
         PICKUP, RELEASE, COMPLETE
     }
 
+    /**
+     * Inner class to record details of an action for undo purposes.
+     */
     private class ActionRecord {
         ActionType type;
         int orderId;
@@ -72,10 +100,17 @@ public class CarrierController {
         }
     }
 
+    // Constants for order status strings in the database
     private static final String STATUS_OUT = "assigned";
     private static final String STATUS_DELIVERED = "completed";
     private static final String STATUS_POOL = "pending";
 
+    /**
+     * Initializes the controller with the logged-in user's data.
+     * Sets up the neighborhood filter and welcomes the user.
+     *
+     * @param user The User object representing the logged-in carrier.
+     */
     public void initData(User user) {
         this.currentUser = user;
         lblUsername.setText("👤 " + user.getUsername());
@@ -98,6 +133,10 @@ public class CarrierController {
         refreshData();
     }
 
+    /**
+     * Standard JavaFX initialize method.
+     * Sets up event listeners for filters and search fields.
+     */
     @FXML
     public void initialize() {
         neighborhoodCombo.setOnAction(e -> refreshData());
@@ -113,6 +152,10 @@ public class CarrierController {
             notificationLabel.setVisible(false);
     }
 
+    /**
+     * Fetches the latest order data from the database and refreshes the UI.
+     * Updates statistics and the state of the undo button.
+     */
     @FXML
     public void refreshData() {
         if (currentUser == null)
@@ -128,6 +171,9 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Updates the text and disable state of the global Undo button based on the history stack.
+     */
     private void updateUndoButtonState() {
         if (undoButton != null) {
             undoButton.setDisable(historyStack.isEmpty());
@@ -135,6 +181,10 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Handles the global undo action.
+     * Reverses the last action (PICKUP, RELEASE, or COMPLETE) performed by the user.
+     */
     @FXML
     public void handleGlobalUndo() {
         if (historyStack.isEmpty()) {
@@ -172,6 +222,12 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Refreshes the VBoxes for Available, Current, and Completed deliveries.
+     * Applies search filtering and date filtering logic.
+     *
+     * @param filterText The text from the search bar to filter orders by name/address.
+     */
     private void updateUI(String filterText) {
         availableDeliveriesBox.getChildren().clear();
         currentDeliveriesBox.getChildren().clear();
@@ -198,6 +254,13 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Creates a graphical card (VBox) representing a single order.
+     * The card includes details like customer name, address, price, and action buttons.
+     *
+     * @param o The Order object to visualize.
+     * @return A VBox containing the order details and controls.
+     */
     private VBox createOrderCard(Order o) {
         VBox card = new VBox(8);
         String borderColor = "#e0e0e0";
@@ -220,15 +283,15 @@ public class CarrierController {
         lblAddr.setWrapText(true);
         lblAddr.setStyle("-fx-text-fill: #555555; -fx-font-size: 11px;");
 
-        // --- ÖDEME TİPİ VE TUTAR ---
+        // --- PAYMENT TYPE AND AMOUNT ---
         String paymentText = "";
         String paymentColor = "";
         if ("ONLINE_PAYMENT".equalsIgnoreCase(o.getPaymentMethod())) {
             paymentText = "💳 ÖDENDİ (ONLINE)";
-            paymentColor = "#27ae60"; // Yeşil
+            paymentColor = "#27ae60"; // Green
         } else {
             paymentText = "💵 NAKİT TAHSİL ET";
-            paymentColor = "#c0392b"; // Kırmızı
+            paymentColor = "#c0392b"; // Red
         }
 
         Label lblPrice = new Label("Tutar: " + String.format("%.2f", o.getTotalCost()) + " TL");
@@ -240,11 +303,11 @@ public class CarrierController {
 
         HBox priceBox = new HBox(10, lblPrice, lblPaymentStatus);
 
-        // --- KAZANÇ GÖSTERGESİ ---
+        // --- EARNINGS INDICATOR ---
         Label lblEarnings = new Label("✨ Kazancın: " + String.format("%.2f", o.getCarrierEarnings()) + " TL");
         lblEarnings.setStyle("-fx-text-fill: #8e44ad; -fx-font-size: 11px; -fx-font-weight: bold;");
 
-        // --- TARİH ---
+        // --- DATE ---
         String reqDateStr = "Belirtilmemiş";
         if (o.getRequestedDeliveryDate() != null) {
             reqDateStr = o.getRequestedDeliveryDate().toLocalDateTime().format(dtf);
@@ -254,6 +317,7 @@ public class CarrierController {
 
         card.getChildren().addAll(lblId, lblName, lblAddr, priceBox, lblEarnings, lblDate);
 
+        // Add product list to card
         List<String> products = OrderDAO.getOrderItemsAsText(o.getId());
         if (!products.isEmpty()) {
             VBox productsBox = new VBox(2);
@@ -266,6 +330,7 @@ public class CarrierController {
             card.getChildren().add(productsBox);
         }
 
+        // Add buttons based on order status
         if (isPool(o)) {
             Button pickUpBtn = new Button("Teslim Al");
             pickUpBtn.setStyle(
@@ -307,6 +372,11 @@ public class CarrierController {
         return card;
     }
 
+    /**
+     * Assigns the selected order to the current carrier (Pickup).
+     *
+     * @param o The order to be picked up.
+     */
     private void handlePickUpInline(Order o) {
         try {
             if (OrderDAO.assignAndPickUp(o.getId(), currentUser.getId())) {
@@ -324,6 +394,11 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Opens a dialog for the carrier to specify the delivery time and marks the order as complete.
+     *
+     * @param o The order to be completed.
+     */
     private void handleCompleteOrderWithDate(Order o) {
         Dialog<LocalDateTime> dialog = new Dialog<>();
         dialog.setTitle("Teslimat");
@@ -364,6 +439,11 @@ public class CarrierController {
         });
     }
 
+    /**
+     * Releases an order back to the pool (Cancel assignment).
+     *
+     * @param o The order to be released.
+     */
     private void handleReleaseOrder(Order o) {
         if (showConfirm("İptal", "Siparişi havuza geri bırakmak istiyor musunuz?")) {
             if (OrderDAO.releaseOrderToPool(o.getId(), currentUser.getId())) {
@@ -377,6 +457,11 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Undoes the completion of a specific order.
+     *
+     * @param o The order to revert status for.
+     */
     private void handleUndoSpecificOrder(Order o) {
         if (showConfirm("Geri Al", "Sipariş #" + o.getId() + " teslimat durumunu geri almak istiyor musunuz?")) {
             if (OrderDAO.undoCompleteOrder(o.getId(), currentUser.getId())) {
@@ -388,6 +473,12 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Displays a temporary notification on the UI.
+     *
+     * @param message   The message to display.
+     * @param isSuccess True for green (success), false for red (error).
+     */
     private void showNotification(String message, boolean isSuccess) {
         if (notificationLabel == null)
             return;
@@ -407,13 +498,16 @@ public class CarrierController {
         });
     }
 
+    /**
+     * Calculates and updates the statistics labels (Active orders, Earnings, Avg Speed).
+     */
     private void updateStats() {
         if (currentUser == null || allOrders == null)
             return;
         long active = allOrders.stream().filter(this::isActiveMine).count();
         List<Order> myDone = allOrders.stream().filter(this::isDeliveredMine).collect(Collectors.toList());
 
-        // Kazanç Hesaplama: Toplam Ciro değil, Kurye Komisyonu Toplamı
+        // Calculate earnings based on carrier commission, not total revenue
         double earnings = myDone.stream().mapToDouble(Order::getCarrierEarnings).sum();
 
         double avgMin = myDone.stream()
@@ -427,19 +521,31 @@ public class CarrierController {
         lblAvgSpeed.setText("Ort. Hız: " + String.format("%.0f", avgMin) + " dk");
     }
 
+    /**
+     * Checks if an order belongs to the 'Pool' (Unassigned).
+     */
     private boolean isPool(Order o) {
         return STATUS_POOL.equals(o.getStatus()) && (o.getCarrierId() == null || o.getCarrierId() == 0);
     }
 
+    /**
+     * Checks if an order is currently assigned to the logged-in carrier.
+     */
     private boolean isActiveMine(Order o) {
         return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId() && STATUS_OUT.equals(o.getStatus());
     }
 
+    /**
+     * Checks if an order was delivered by the logged-in carrier.
+     */
     private boolean isDeliveredMine(Order o) {
         return o.getCarrierId() != null && o.getCarrierId() == currentUser.getId()
                 && STATUS_DELIVERED.equals(o.getStatus());
     }
 
+    /**
+     * Checks if a completed order matches the selected date filter (24h or 30 days).
+     */
     private boolean checkDateFilter(Order o, LocalDateTime now) {
         if (o.getDeliveryTime() == null)
             return true;
@@ -448,6 +554,9 @@ public class CarrierController {
                 : dt.isAfter(now.minusDays(30));
     }
 
+    /**
+     * Checks if an order matches the current search text (Name, Address, Neighborhood).
+     */
     private boolean matchesSearch(Order o, String filterText) {
         if (filterText == null || filterText.isEmpty())
             return true;
@@ -457,10 +566,17 @@ public class CarrierController {
                 safe(o.getDeliveryNeighborhood()).toLowerCase().contains(lower);
     }
 
+    /**
+     * Null-safe string utility.
+     */
     private String safe(String s) {
         return (s == null) ? "" : s;
     }
 
+    /**
+     * Shows a confirmation alert dialog.
+     * @return true if the user clicked OK, false otherwise.
+     */
     private boolean showConfirm(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, content, ButtonType.OK, ButtonType.CANCEL);
         alert.setTitle(title);
@@ -468,13 +584,16 @@ public class CarrierController {
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
+    /**
+     * Handles the logout process, returning the user to the login screen.
+     */
     @FXML
     public void handleLogout() {
         try {
-            Stage stage = (Stage) lblUsername.getScene().getWindow(); // lblUsername veya lblActiveOrders kullanabilirsin
+            Stage stage = (Stage) lblUsername.getScene().getWindow();
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
             
-            // 1280x800 boyutunda aç
+            // Set window size for login screen
             Scene scene = new Scene(root, 1200, 900);
             
             stage.setScene(scene);
@@ -488,6 +607,9 @@ public class CarrierController {
         }
     }
 
+    /**
+     * Displays a dialog showing the carrier's ratings and reviews.
+     */
     @FXML
     private void handleViewRatings() {
         List<OrderDAO.CarrierRating> ratings = OrderDAO.getCarrierRatings(currentUser.getId());
@@ -506,13 +628,13 @@ public class CarrierController {
             noRatingsLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
             content.getChildren().add(noRatingsLabel);
         } else {
-            // Ortalama puan göster
+            // Show average rating
             double avgRating = ratings.stream().mapToInt(r -> r.rating).average().orElse(0.0);
             Label avgLabel = new Label(String.format("📊 Ortalama Puan: %.1f/5.0 (%d değerlendirme)", avgRating, ratings.size()));
             avgLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
             content.getChildren().add(avgLabel);
 
-            // Değerlendirme listesi
+            // List of ratings
             ScrollPane scrollPane = new ScrollPane();
             VBox ratingsBox = new VBox(8);
 
@@ -521,12 +643,12 @@ public class CarrierController {
                 ratingRow.setPadding(new Insets(10));
                 ratingRow.setStyle("-fx-background-color: #f9f9f9; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;");
 
-                // Yıldızlar
+                // Stars
                 String stars = "★".repeat(rating.rating) + "☆".repeat(5 - rating.rating);
                 Label starsLabel = new Label(stars);
                 starsLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #ff9800;");
 
-                // Bilgiler
+                // Info
                 VBox infoBox = new VBox(2);
                 Label customerLabel = new Label("Müşteri: " + rating.customerName);
                 customerLabel.setStyle("-fx-font-weight: bold;");

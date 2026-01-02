@@ -23,57 +23,73 @@ import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Controller class for the Shopping Cart and Checkout screen.
+ * <p>
+ * This class manages the user's shopping cart interactions, including:
+ * </p>
+ * <ul>
+ * <li>Dynamically rendering cart items using a VBox layout.</li>
+ * <li>Adjusting item quantities and removing items.</li>
+ * <li>Calculating totals including VAT, coupon discounts, and loyalty rewards.</li>
+ * <li>Handling the final checkout process and order creation.</li>
+ * </ul>
+ *
+ * @author Group12
+ * @version 1.0
+ */
 public class ShoppingCartController {
 
-    // Artık TableView yok, VBox var
+    /** Container for dynamically added cart item rows. Replaces the traditional TableView. */
     @FXML
     private VBox cartItemsContainer;
 
-    @FXML
-    private Label subtotalLabel;
-    @FXML
-    private Label vatLabel;
-    @FXML
-    private Label discountLabel;
-    @FXML
-    private Label totalLabel;
+    @FXML private Label subtotalLabel;
+    @FXML private Label vatLabel;
+    @FXML private Label discountLabel;
+    @FXML private Label totalLabel;
 
-    @FXML
-    private TextField couponField;
-    @FXML
-    private Label couponMessageLabel;
+    @FXML private TextField couponField;
+    @FXML private Label couponMessageLabel;
 
-    @FXML
-    private DatePicker deliveryDatePicker;
-    @FXML
-    private ComboBox<String> deliveryTimeCombo;
-    @FXML
-    private Label checkoutMessageLabel;
+    @FXML private DatePicker deliveryDatePicker;
+    @FXML private ComboBox<String> deliveryTimeCombo;
+    @FXML private Label checkoutMessageLabel;
 
-    @FXML
-    private RadioButton rbCreditCard;
-    @FXML
-    private RadioButton rbCash;
+    @FXML private RadioButton rbCreditCard;
+    @FXML private RadioButton rbCash;
     private ToggleGroup paymentGroup;
 
     private double discountAmount = 0.0;
     private final double VAT_RATE = 0.18;
 
+    /**
+     * Initializes the controller class.
+     * Sets up delivery options, configures payment toggles, and renders the initial state of the cart.
+     */
     @FXML
     private void initialize() {
         setupDeliveryOptions();
-        setupPaymentOptions(); // Ödeme yöntemlerini ayarla
-        renderCartItems(); // Tablo yerine görsel kartları yükle
+        setupPaymentOptions(); // Configure payment methods
+        renderCartItems(); // Load visual cards instead of a table
     }
 
+    /**
+     * Configures the toggle group for payment methods (Credit Card vs Cash).
+     * Sets 'Cash' as the default selection.
+     */
     private void setupPaymentOptions() {
         paymentGroup = new ToggleGroup();
         rbCreditCard.setToggleGroup(paymentGroup);
         rbCash.setToggleGroup(paymentGroup);
-        rbCash.setSelected(true); // Varsayılan Nakit
+        rbCash.setSelected(true); // Default to Cash
     }
 
-    // --- YENİ GÖRSEL SEPET MANTIĞI ---
+    /**
+     * Clears the current view and dynamically renders each item in the shopping cart.
+     * If the cart is empty, displays a placeholder message.
+     * Triggers a total calculation update after rendering.
+     */
     private void renderCartItems() {
         cartItemsContainer.getChildren().clear();
         List<CartItem> items = ShoppingCart.getInstance().getItems();
@@ -90,13 +106,20 @@ public class ShoppingCartController {
         updateTotals();
     }
 
+    /**
+     * Creates a visual row (HBox) representing a single item in the cart.
+     * Includes the product image, name, price, quantity controls (+/-), and a remove button.
+     *
+     * @param item The CartItem object to visualize.
+     * @return An HBox containing the UI controls for the item.
+     */
     private HBox createCartItemRow(CartItem item) {
         HBox row = new HBox(15);
         row.setStyle(
                 "-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 2, 0, 0, 1);");
         row.setAlignment(Pos.CENTER_LEFT);
 
-        // 1. Resim
+        // 1. Image
         ImageView imgView = new ImageView();
         imgView.setFitHeight(60);
         imgView.setFitWidth(60);
@@ -105,10 +128,11 @@ public class ShoppingCartController {
             try {
                 imgView.setImage(new Image(new ByteArrayInputStream(item.getProduct().getImage())));
             } catch (Exception e) {
+                // Ignore image load errors
             }
         }
 
-        // 2. Ürün Bilgisi
+        // 2. Product Info
         VBox infoBox = new VBox(5);
         Label nameLbl = new Label(item.getProduct().getName());
         nameLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -120,7 +144,7 @@ public class ShoppingCartController {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // 3. Miktar Kontrolleri (+ - butonları)
+        // 3. Quantity Controls (+ - buttons)
         HBox qtyBox = new HBox(5);
         qtyBox.setAlignment(Pos.CENTER);
 
@@ -133,11 +157,11 @@ public class ShoppingCartController {
         Button plusBtn = new Button("+");
         plusBtn.setStyle("-fx-min-width: 30px; -fx-background-color: #eee; -fx-cursor: hand;");
 
-        // Buton Aksiyonları
+        // Button Actions
         minusBtn.setOnAction(e -> {
             if (item.getQuantity() > 0.5) {
-                item.addQuantity(-0.5); // CartItem modelinde addQuantity var
-                renderCartItems(); // Yeniden çiz
+                item.addQuantity(-0.5); // addQuantity method in CartItem model
+                renderCartItems(); // Re-render
             } else {
                 ShoppingCart.getInstance().removeItem(item);
                 renderCartItems();
@@ -149,19 +173,18 @@ public class ShoppingCartController {
                 item.addQuantity(0.5);
                 renderCartItems();
             } else {
-                // Stok uyarısı basitçe console veya label (burada sessiz kalıyoruz, UI
-                // bozulmasın)
+                // Stock warning could be added here
             }
         });
 
         qtyBox.getChildren().addAll(minusBtn, qtyLbl, plusBtn);
 
-        // 4. Toplam Tutar
+        // 4. Total Price for Item
         Label totalLbl = new Label(String.format("%.2f TL", item.getTotalPrice()));
         totalLbl.setStyle(
                 "-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2e7d32; -fx-min-width: 80px; -fx-alignment: center-right;");
 
-        // 5. Silme Butonu
+        // 5. Delete Button
         Button delBtn = new Button("✕");
         delBtn.setStyle(
                 "-fx-text-fill: #999; -fx-background-color: transparent; -fx-font-weight: bold; -fx-cursor: hand;");
@@ -170,21 +193,28 @@ public class ShoppingCartController {
             renderCartItems();
         });
 
-        // HBox'a ekle
+        // Add to HBox
         row.getChildren().addAll(imgView, infoBox, spacer, qtyBox, totalLbl, delBtn);
         return row;
     }
 
+    /**
+     * Recalculates and updates the checkout totals on the UI.
+     * Computes Subtotal, VAT (18%), Coupon Discounts, and Loyalty Discounts.
+     * <p>
+     * <b>Loyalty Logic:</b> Users with 5 or more completed orders receive an automatic 10% discount.
+     * </p>
+     */
     private void updateTotals() {
         double subtotal = ShoppingCart.getInstance().calculateSubtotal();
         double vat = subtotal * VAT_RATE;
 
-        // Loyalty Discount hesapla
+        // Calculate Loyalty Discount
         User user = ShoppingCart.getInstance().getCurrentUser();
         int completedOrders = OrderDAO.getCompletedOrderCount(user.getId());
         double loyaltyDiscount = 0;
         if (completedOrders >= 5) {
-            loyaltyDiscount = subtotal * 0.10; // %10
+            loyaltyDiscount = subtotal * 0.10; // 10%
         }
 
         double totalDiscount = discountAmount + loyaltyDiscount;
@@ -198,6 +228,10 @@ public class ShoppingCartController {
         totalLabel.setText(String.format("%.2f TL", total));
     }
 
+    /**
+     * Configures the delivery date picker and time combo box.
+     * Disables past dates and restricts selection to the next 2 days.
+     */
     private void setupDeliveryOptions() {
         deliveryDatePicker.setDayCellFactory(picker -> new DateCell() {
             @Override
@@ -214,6 +248,9 @@ public class ShoppingCartController {
         deliveryTimeCombo.getSelectionModel().select(0);
     }
 
+    /**
+     * Clears all items from the shopping cart and resets the UI.
+     */
     @FXML
     private void handleClearCart() {
         ShoppingCart.getInstance().clear();
@@ -221,6 +258,10 @@ public class ShoppingCartController {
         renderCartItems();
     }
 
+    /**
+     * Validates and applies a coupon code entered by the user.
+     * Checks if the coupon exists, is active, and if the cart meets the minimum purchase amount.
+     */
     @FXML
     private void handleApplyCoupon() {
         String code = couponField.getText().trim();
@@ -256,6 +297,21 @@ public class ShoppingCartController {
         }
     }
 
+    /**
+     * Processes the final checkout.
+     * <p>
+     * Validations performed:
+     * </p>
+     * <ul>
+     * <li>Cart is not empty.</li>
+     * <li>Delivery date and time are selected.</li>
+     * <li>Payment method is selected.</li>
+     * <li>Total amount meets the minimum cart value (50 TL).</li>
+     * </ul>
+     * <p>
+     * If validation passes, creates the order via {@link OrderDAO} and clears the cart.
+     * </p>
+     */
     @FXML
     private void handleCheckout() {
         if (ShoppingCart.getInstance().getItemCount() == 0) {
@@ -274,31 +330,31 @@ public class ShoppingCartController {
         double subtotal = ShoppingCart.getInstance().calculateSubtotal();
         double vat = subtotal * VAT_RATE;
 
-        // Loyalty Discount: 5+ tamamlanmış sipariş için %10 indirim
+        // Loyalty Discount: 10% discount for 5+ completed orders
         User user = ShoppingCart.getInstance().getCurrentUser();
         int completedOrders = OrderDAO.getCompletedOrderCount(user.getId());
         double loyaltyDiscount = 0;
         if (completedOrders >= 5) {
-            loyaltyDiscount = subtotal * 0.10; // %10 indirim
+            loyaltyDiscount = subtotal * 0.10; // 10% discount
         }
 
         double total = subtotal + vat - discountAmount - loyaltyDiscount;
 
-        // Minimum cart value kontrolü (örneğin 50 TL)
+        // Minimum cart value check (e.g., 50 TL)
         double MIN_CART_VALUE = 50.0;
         if (total < MIN_CART_VALUE) {
             checkoutMessageLabel.setText("Minimum order value is " + MIN_CART_VALUE + " TL. Current total: " + String.format("%.2f", total) + " TL.");
             return;
         }
 
-        // GÜNCELLENDİ: Ödeme Yöntemini Al
+        // Get Payment Method
         String paymentMethod = rbCreditCard.isSelected() ? "ONLINE_PAYMENT" : "CASH_ON_DELIVERY";
 
         boolean success = OrderDAO.createOrder(
                 ShoppingCart.getInstance().getCurrentUser(),
                 subtotal, vat, discountAmount, total,
                 deliveryDatePicker.getValue(), deliveryTimeCombo.getValue(),
-                paymentMethod, loyaltyDiscount // Yeni parametre
+                paymentMethod, loyaltyDiscount
         );
 
         if (success) {
@@ -315,9 +371,11 @@ public class ShoppingCartController {
         }
     }
 
+    /**
+     * Closes the shopping cart window to allow the user to continue browsing.
+     */
     @FXML
     private void handleContinueShopping() {
         ((Stage) checkoutMessageLabel.getScene().getWindow()).close();
     }
-
 }

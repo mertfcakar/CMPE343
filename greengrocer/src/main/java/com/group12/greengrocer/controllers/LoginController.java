@@ -20,11 +20,20 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 
+/**
+ * Controls the logic for the user authentication (Login) screen.
+ * <p>
+ * This class handles user input validation, background authentication processing,
+ * security measures (failed attempt lockout), and role-based redirection
+ * to the appropriate dashboards.
+ * </p>
+ */
 public class LoginController {
 
+    // --- FXML UI Components ---
     @FXML public TextField usernameField;
     @FXML public PasswordField passwordField;
-    @FXML public TextField passwordTextField;
+    @FXML public TextField passwordTextField; // Visible text field for "Show Password"
     @FXML public CheckBox showPasswordCheck;
     @FXML public Label messageLabel;
     @FXML public Button loginButton;
@@ -34,13 +43,31 @@ public class LoginController {
     @FXML public Label subtitleLabel;
     @FXML public VBox mainContainer;
 
+    /**
+     * Counter for failed login attempts in the current session.
+     */
     private int loginAttempts = 0;
+
+    /**
+     * Maximum allowed failed attempts before temporary lockout.
+     */
     private final int MAX_ATTEMPTS = 3;
+
+    /**
+     * Countdown timer variable for the lockout duration.
+     */
     private int remainingSeconds;
 
+    /**
+     * Initializes the controller class.
+     * <p>
+     * Sets up event listeners, specifically binding the "Enter" key
+     * to the login action for better user experience.
+     * </p>
+     */
     @FXML
     public void initialize() {
-        // Null kontrolü ile güvenli hale getirdik
+        // Safe null-check before adding listeners
         if (passwordField != null) {
             passwordField.setOnKeyPressed(event -> {
                 if (event.getCode() == KeyCode.ENTER)
@@ -56,9 +83,23 @@ public class LoginController {
         }
     }
 
+    /**
+     * Handles the login process when the user clicks the login button or presses Enter.
+     * <p>
+     * Workflow:
+     * </p>
+     * <ol>
+     * <li>Validates that fields are not empty.</li>
+     * <li>Disables UI and shows loading indicator.</li>
+     * <li>Performs authentication in a background thread to prevent UI freezing.</li>
+     * <li>On success: Redirects to the dashboard via {@link #openDashboard(User)}.</li>
+     * <li>On failure: Increments retry counter and triggers {@link #startLockout()} if limit reached.</li>
+     * </ol>
+     */
     @FXML
     public void handleLogin() {
         String u = usernameField.getText().trim();
+        // Determine which field holds the current password input
         String p = showPasswordCheck.isSelected() ? passwordTextField.getText() : passwordField.getText();
 
         if (u.isEmpty() || p.isEmpty()) {
@@ -68,10 +109,12 @@ public class LoginController {
 
         startLoading();
 
+        // Run database operation in a background thread
         new Thread(() -> {
             try {
                 User user = UserDAO.login(u, p);
 
+                // Update UI back on the JavaFX Application Thread
                 javafx.application.Platform.runLater(() -> {
                     stopLoading();
 
@@ -95,6 +138,11 @@ public class LoginController {
         }).start();
     }
 
+    /**
+     * Redirects the authenticated user to the appropriate dashboard based on their role.
+     *
+     * @param user The authenticated {@link User} object.
+     */
     private void openDashboard(User user) {
         try {
             FXMLLoader loader;
@@ -116,6 +164,7 @@ public class LoginController {
                 title = "Owner Dashboard - " + user.getUsername();
 
             } else {
+                // Default to Customer dashboard
                 loader = new FXMLLoader(getClass().getResource("/fxml/customer.fxml"));
                 root = loader.load();
                 CustomerController controller = loader.getController();
@@ -127,7 +176,7 @@ public class LoginController {
             stage.setScene(new Scene(root));
             stage.setTitle(title);
             
-            // Dashboard açılınca tam ekran yap
+            // Maximize window for the main application
             stage.setMaximized(true); 
             
             stage.show();
@@ -138,24 +187,41 @@ public class LoginController {
         }
     }
 
-    // --- TEK PENCERE GEÇİŞLERİ ---
+    // --- NAVIGATION METHODS ---
 
+    /**
+     * Navigates to the User Registration screen.
+     *
+     * @param event The action event triggering the navigation.
+     */
     @FXML
     public void switchToRegister(ActionEvent event) {
         changeScene(event, "/fxml/register.fxml", "GreenGrocer - Register");
     }
 
+    /**
+     * Navigates to the Password Recovery screen.
+     *
+     * @param event The action event triggering the navigation.
+     */
     @FXML
     public void switchToForgotPassword(ActionEvent event) {
         changeScene(event, "/fxml/forgot_password.fxml", "GreenGrocer - Reset Password");
     }
 
+    /**
+     * Utility method to switch the current scene.
+     *
+     * @param event    The event source (used to get the stage).
+     * @param fxmlPath The resource path to the new FXML file.
+     * @param title    The title of the new window.
+     */
     private void changeScene(ActionEvent event, String fxmlPath, String title) {
         try {
             Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             
-            // BURASI GÜNCELLENDİ: Daha büyük pencere (1280x800)
+            // Set default size for auth screens (1280x800)
             stage.setScene(new Scene(root, 1280, 800));
             
             stage.setTitle(title);
@@ -166,8 +232,15 @@ public class LoginController {
         }
     }
 
-    // --- YARDIMCI FONKSİYONLAR ---
+    // --- HELPER METHODS ---
 
+    /**
+     * Initiates a security lockout preventing login attempts for 30 seconds.
+     * <p>
+     * This is triggered after {@code MAX_ATTEMPTS} is reached. A {@link Timeline}
+     * is used to update the countdown label every second.
+     * </p>
+     */
     private void startLockout() {
         loginButton.setDisable(true);
         usernameField.setDisable(true);
@@ -195,15 +268,23 @@ public class LoginController {
         timeline.play();
     }
 
+    /**
+     * Toggles password visibility between masked characters and plain text.
+     * <p>
+     * Syncs the text between {@code passwordField} (masked) and {@code passwordTextField} (visible).
+     * </p>
+     */
     @FXML
     public void handlePasswordVisibility() {
         if (showPasswordCheck.isSelected()) {
+            // Switch to visible text
             passwordTextField.setText(passwordField.getText());
             passwordTextField.setVisible(true);
             passwordTextField.setManaged(true);
             passwordField.setVisible(false);
             passwordField.setManaged(false);
         } else {
+            // Switch to masked text
             passwordField.setText(passwordTextField.getText());
             passwordField.setVisible(true);
             passwordField.setManaged(true);
@@ -212,11 +293,22 @@ public class LoginController {
         }
     }
 
+    /**
+     * Displays an error message to the user in red.
+     *
+     * @param m The message string to display.
+     */
     private void showError(String m) {
         messageLabel.setText(m);
         messageLabel.setTextFill(Color.RED);
     }
 
+    /**
+     * Sets the UI to a "Loading" state.
+     * <p>
+     * Disables input fields and buttons, and shows the progress indicator.
+     * </p>
+     */
     private void startLoading() {
         loginButton.setDisable(true);
         usernameField.setDisable(true);
@@ -229,6 +321,9 @@ public class LoginController {
         messageLabel.setTextFill(Color.BLUE);
     }
 
+    /**
+     * Reverts the UI from the "Loading" state to the interactive state.
+     */
     private void stopLoading() {
         loginButton.setDisable(false);
         usernameField.setDisable(false);

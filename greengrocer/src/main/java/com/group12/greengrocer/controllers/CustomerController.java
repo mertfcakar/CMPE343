@@ -43,20 +43,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-// PDF için
+// For PDF
 import java.awt.Desktop;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-// FileChooser için
+// For FileChooser
 import javafx.stage.FileChooser;
 
+/**
+ * Controller class for the Customer Dashboard.
+ * <p>
+ * This class serves as the main entry point for customer interactions. It handles:
+ * <ul>
+ * <li>Displaying products (Vegetables and Fruits) with filtering and sorting.</li>
+ * <li>Managing the shopping cart interactions.</li>
+ * <li>Viewing past and current orders.</li>
+ * <li>Downloading order invoices as PDF.</li>
+ * <li>Updating user profile information.</li>
+ * <li>A support chat system to communicate with the store manager regarding specific orders.</li>
+ * </ul>
+ */
 public class CustomerController {
 
     private User currentUser;
     private List<Product> allProducts;
 
-    // ANA EKRAN
+    // MAIN SCREEN
     @FXML
     private BorderPane mainContent;
     @FXML
@@ -70,9 +83,9 @@ public class CustomerController {
     @FXML
     private TextField searchField;
     @FXML
-    private ComboBox<String> sortComboBox; // YENİ: Sıralama Kutusu
+    private ComboBox<String> sortComboBox; 
 
-    // OVERLAYS
+    // OVERLAYS (Modals)
     @FXML
     private StackPane overlayContainer;
     @FXML
@@ -80,11 +93,11 @@ public class CustomerController {
     @FXML
     private VBox profileOverlay;
     @FXML
-    private HBox chatOverlay; // YENİ: Chat artık HBox (Sol Menu + Sağ İçerik)
+    private HBox chatOverlay; 
     @FXML
     private VBox orderDetailOverlay;
 
-    // SİPARİŞ TABLOSU
+    // ORDER TABLE
     @FXML
     private TableView<Order> ordersTable;
     @FXML
@@ -100,13 +113,13 @@ public class CustomerController {
     @FXML
     private TableColumn<Order, Void> colAction;
 
-    // DETAY
+    // DETAILS
     @FXML
     private VBox orderDetailContainer;
     @FXML
     private Label detailOrderIdLabel;
 
-    // PROFİL
+    // PROFILE
     @FXML
     private TextField editAddressField;
     @FXML
@@ -116,9 +129,9 @@ public class CustomerController {
     @FXML
     private PasswordField editPasswordField;
 
-    // CHAT (GELİŞMİŞ)
+    // CHAT SYSTEM
     @FXML
-    private ListView<String> chatTopicsList; // Konu Başlıkları
+    private ListView<String> chatTopicsList; 
     @FXML
     private VBox chatMessagesBox;
     @FXML
@@ -128,14 +141,20 @@ public class CustomerController {
     @FXML
     private Label chatCurrentTopicLabel;
 
-    private String currentChatSubject = "Genel Destek"; // Varsayılan Konu
+    private String currentChatSubject = "Genel Destek"; // Default Subject
 
+    /**
+     * Initializes the controller with the logged-in user's data.
+     * Sets up the shopping cart context, sort options, and loads initial product data.
+     *
+     * @param user The User object representing the logged-in customer.
+     */
     public void initData(User user) {
         this.currentUser = user;
         usernameLabel.setText("Merhaba, " + user.getUsername());
         ShoppingCart.getInstance().setCurrentUser(user);
 
-        // Sıralama Seçeneklerini Yükle
+        // Load Sort Options
         if (sortComboBox != null) {
             sortComboBox.getItems().addAll("Varsayılan (A-Z)", "İsim (Z-A)", "Fiyat (Artan)", "Fiyat (Azalan)");
             sortComboBox.setValue("Varsayılan (A-Z)");
@@ -146,7 +165,7 @@ public class CustomerController {
         updateCartLabel();
         closeAllOverlays();
 
-        // Chat konusunu seçince mesajları yükle
+        // Listener for chat topic selection
         if (chatTopicsList != null) {
             chatTopicsList.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal != null) {
@@ -157,12 +176,20 @@ public class CustomerController {
         }
     }
 
-    // --- ÜRÜN YÖNETİMİ VE SIRALAMA ---
+    // --- PRODUCT MANAGEMENT AND SORTING ---
+
+    /**
+     * Fetches all products from the database and displays them.
+     */
     private void loadProducts() {
-        allProducts = ProductDAO.getAllProducts(); // Varsayılan A-Z gelir
+        allProducts = ProductDAO.getAllProducts(); // Default A-Z
         displayProducts(allProducts);
     }
 
+    /**
+     * Sorts the product list based on the selected criteria in the ComboBox.
+     * Supports sorting by Name (A-Z, Z-A) and Price (Ascending, Descending).
+     */
     private void handleSortProducts() {
         String sortType = sortComboBox.getValue();
         if (sortType == null || allProducts == null)
@@ -181,6 +208,12 @@ public class CustomerController {
         displayProducts(sortedList);
     }
 
+    /**
+     * Renders the list of products into the UI FlowPanes.
+     * Separates products into "Vegetables" and "Fruits" categories.
+     *
+     * @param products The list of products to display.
+     */
     private void displayProducts(List<Product> products) {
         if (vegetablesFlowPane != null)
             vegetablesFlowPane.getChildren().clear();
@@ -196,7 +229,15 @@ public class CustomerController {
         }
     }
 
-    // --- ÜRÜN KARTI ---
+    // --- PRODUCT CARD GENERATION ---
+
+    /**
+     * Creates a graphical card (VBox) representing a single product.
+     * Includes the image, stock status, price, and "Add to Cart" functionality.
+     *
+     * @param p The product to visualize.
+     * @return A VBox containing the product controls.
+     */
     private VBox createProductCard(Product p) {
         VBox card = new VBox(10);
         card.setStyle(
@@ -223,15 +264,15 @@ public class CustomerController {
                 + (p.getStock() <= 0 ? "#c62828" : (p.getStock() <= p.getThreshold() ? "#f57c00" : "#4caf50"))
                 + "; -fx-text-fill: white; -fx-padding: 3 8; -fx-background-radius: 5; -fx-font-size: 10px; -fx-font-weight: bold;");
 
-                // Stock miktarı göster
-                Label stockAmountLbl = new Label();
-                if (p.getStock() <= p.getThreshold()) {
-                    stockAmountLbl.setText(String.format("Stok: %.1f kg", p.getStock()));
-                    stockAmountLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " 
-                    + (p.getStock() <= 0 ? "#c62828" : "#f57c00") + "; -fx-font-weight: bold;");
-                }
+        // Show exact stock amount if low
+        Label stockAmountLbl = new Label();
+        if (p.getStock() <= p.getThreshold()) {
+            stockAmountLbl.setText(String.format("Stok: %.1f kg", p.getStock()));
+            stockAmountLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " 
+            + (p.getStock() <= 0 ? "#c62828" : "#f57c00") + "; -fx-font-weight: bold;");
+        }
 
-                Label nameLbl = new Label(p.getName());
+        Label nameLbl = new Label(p.getName());
         nameLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333;");
         Label priceLbl = new Label(String.format("%.2f TL / kg", p.getCurrentPrice()));
         priceLbl.setStyle("-fx-text-fill: #2e7d32; -fx-font-weight: bold; -fx-font-size: 14px;");
@@ -269,7 +310,6 @@ public class CustomerController {
         actions.setAlignment(Pos.CENTER);
         card.getChildren().addAll(stockLbl, imgView, nameLbl, priceLbl);
         
-        // Stock miktarı varsa ekle
         if (!stockAmountLbl.getText().isEmpty()) {
             card.getChildren().add(stockAmountLbl);
         }
@@ -278,12 +318,19 @@ public class CustomerController {
         return card;
     }
 
+    /**
+     * Updates the UI label showing the total number of items in the cart.
+     */
     private void updateCartLabel() {
         if (cartItemsLabel != null)
             cartItemsLabel.setText(ShoppingCart.getInstance().getItemCount() + " ürün");
     }
 
-    // --- OVERLAY YÖNETİMİ (SORUN ÇÖZÜLDÜ) ---
+    // --- OVERLAY MANAGEMENT ---
+
+    /**
+     * Closes all open overlays (Orders, Profile, Chat, Details) and removes the blur effect.
+     */
     @FXML
     public void closeAllOverlays() {
         if (overlayContainer != null)
@@ -291,7 +338,6 @@ public class CustomerController {
         if (mainContent != null)
             mainContent.setEffect(null);
 
-        // Hepsini tek tek gizle ki bir sonraki açılışta çakışma olmasın
         if (ordersOverlay != null)
             ordersOverlay.setVisible(false);
         if (profileOverlay != null)
@@ -302,8 +348,12 @@ public class CustomerController {
             orderDetailOverlay.setVisible(false);
     }
 
+    /**
+     * Opens a specific overlay with a fade-in animation and applies a blur effect to the background.
+     * @param overlay The JavaFX Parent node to display.
+     */
     private void openOverlay(Parent overlay) {
-        closeAllOverlays(); // Önce diğerlerini kapat
+        closeAllOverlays(); 
         overlayContainer.setVisible(true);
         mainContent.setEffect(new BoxBlur(10, 10, 3));
         overlay.setVisible(true);
@@ -316,7 +366,12 @@ public class CustomerController {
         ft.play();
     }
 
-    // --- SİPARİŞLER ---
+    // --- ORDER MANAGEMENT ---
+
+    /**
+     * Configures the TableView to show the user's orders and opens the Order Overlay.
+     * Adds custom buttons (Detail, Help, Rate, Cancel) to each row based on order status.
+     */
     @FXML
     private void handleViewOrders() {
         colId.setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -329,8 +384,8 @@ public class CustomerController {
         colAction.setCellFactory(param -> new TableCell<>() {
             private final Button btnRate = new Button("⭐");
             private final Button btnDetail = new Button("📄 Detay");
-            private final Button btnHelp = new Button("❓"); // Destek Butonu
-            private final Button btnCancel = new Button("❌ İptal"); // İptal Butonu
+            private final Button btnHelp = new Button("❓"); 
+            private final Button btnCancel = new Button("❌ İptal"); 
             private final HBox pane = new HBox(5, btnDetail, btnHelp, btnRate);
 
             {
@@ -348,7 +403,6 @@ public class CustomerController {
                 btnDetail.setOnAction(e -> CustomerController.this.showOrderDetails(getTableView().getItems().get(getIndex())));
                 btnCancel.setOnAction(e -> CustomerController.this.handleCancelOrder(getTableView().getItems().get(getIndex())));
 
-                // Sipariş için destek başlatma
                 btnHelp.setOnAction(e -> {
                     Order o = getTableView().getItems().get(getIndex());
                     CustomerController.this.openChatWithTopic("Sipariş #" + o.getId());
@@ -378,6 +432,12 @@ public class CustomerController {
         openOverlay(ordersOverlay);
     }
 
+    /**
+     * Displays the details of a selected order, including product images and prices.
+     * Provides functionality to download the invoice as a PDF if the order is completed.
+     *
+     * @param order The order to display details for.
+     */
     private void showOrderDetails(Order order) {
         detailOrderIdLabel.setText("Sipariş #" + order.getId() + " Detayları");
         orderDetailContainer.getChildren().clear();
@@ -387,11 +447,10 @@ public class CustomerController {
         for (OrderDAO.OrderDetail item : details) {
             HBox row = new HBox(15);
             row.setAlignment(Pos.CENTER_LEFT);
-            // Arka planı hafif gri yaptık, çerçeve ekledik
             row.setStyle(
                     "-fx-background-color: #f9f9f9; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e0e0e0;");
 
-            // 1. Resim
+            // 1. Image
             ImageView imgView = new ImageView();
             imgView.setFitHeight(50);
             imgView.setFitWidth(50);
@@ -408,19 +467,17 @@ public class CustomerController {
             imgContainer.setPrefSize(50, 50);
             imgContainer.setStyle("-fx-background-color: #e0e0e0; -fx-background-radius: 5;");
 
-            // 2. Bilgiler (RENK DÜZELTMESİ BURADA)
+            // 2. Info
             VBox info = new VBox(3);
             Label nameLbl = new Label(item.name);
-            // YAZI RENGİNİ SİYAH (#333) YAPTIK
             nameLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;");
 
             Label qtyLbl = new Label(String.format("%.2f kg x %.2f TL", item.quantity, item.unitPrice));
-            // YAZI RENGİNİ KOYU GRİ (#666) YAPTIK
             qtyLbl.setStyle("-fx-text-fill: #666666; -fx-font-size: 12px;");
 
             info.getChildren().addAll(nameLbl, qtyLbl);
 
-            // 3. Fiyat
+            // 3. Price
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
@@ -431,7 +488,7 @@ public class CustomerController {
             orderDetailContainer.getChildren().add(row);
         }
 
-        // PDF Butonu - Sadece tamamlanmış siparişler için
+        // PDF Button - Only for completed orders
         if ("completed".equalsIgnoreCase(order.getStatus())) {
             HBox pdfBox = new HBox(10);
             pdfBox.setAlignment(Pos.CENTER);
@@ -449,7 +506,6 @@ public class CustomerController {
                         new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
                     );
                     
-                    // Geçerli stage'i bul
                     Stage stage = (Stage) pdfBtn.getScene().getWindow();
                     java.io.File selectedFile = fileChooser.showSaveDialog(stage);
                     
@@ -458,7 +514,7 @@ public class CustomerController {
                             Files.write(selectedFile.toPath(), pdfBytes);
                             showAlert("Başarılı", "PDF başarıyla kaydedildi: " + selectedFile.getAbsolutePath());
                             
-                            // Kaydedilen PDF'i aç
+                            // Open the saved PDF
                             Desktop.getDesktop().open(selectedFile);
                         } catch (Exception ex) {
                             showAlert("Hata", "PDF kaydedilemedi: " + ex.getMessage());
@@ -476,7 +532,11 @@ public class CustomerController {
         openOverlay(orderDetailOverlay);
     }
 
-    // --- GELİŞMİŞ CHAT SİSTEMİ (KONULU) ---
+    // --- CHAT SYSTEM ---
+
+    /**
+     * Opens the Support Chat overlay and loads the list of conversation topics.
+     */
     @FXML
     private void handleOpenChat() {
         refreshChatTopics();
@@ -487,19 +547,27 @@ public class CustomerController {
         openOverlay(chatOverlay);
     }
 
-    // Siparişlerim'den tıklandığında direkt o konuyu açar
+    /**
+     * Opens the chat overlay with a specific topic pre-selected.
+     * Often used when clicking "Help" on a specific order.
+     *
+     * @param topic The topic to open (e.g., "Sipariş #123").
+     */
     private void openChatWithTopic(String topic) {
         refreshChatTopics();
         if (!chatTopicsList.getItems().contains(topic)) {
-            chatTopicsList.getItems().add(0, topic); // Listeye ekle
+            chatTopicsList.getItems().add(0, topic);
         }
         chatTopicsList.getSelectionModel().select(topic);
         openOverlay(chatOverlay);
     }
 
+    /**
+     * Refreshes the list of chat topics based on message history in the database.
+     * Groups messages by their 'Subject'.
+     */
     private void refreshChatTopics() {
         int ownerId = UserDAO.getOwnerId();
-        // Tüm mesajları çekip tarihlerine göre gruplayacağız
         List<Message> allMsgs = MessageDAO.getConversation(currentUser.getId(), ownerId);
 
         chatTopicsList.getItems().clear();
@@ -507,7 +575,6 @@ public class CustomerController {
         if (allMsgs.isEmpty()) {
             chatTopicsList.getItems().add("Genel Destek");
         } else {
-            // Mesajları Konuya Göre Grupla
             Map<String, List<Message>> grouped = allMsgs.stream()
                     .collect(Collectors.groupingBy(Message::getSubject));
 
@@ -515,34 +582,36 @@ public class CustomerController {
                 String subject = entry.getKey();
                 List<Message> msgs = entry.getValue();
 
-                // O konudaki en son mesajın tarihini bul
                 String lastDate = "";
                 if (!msgs.isEmpty()) {
                     Message lastMsg = msgs.get(msgs.size() - 1);
-                    // Tarihi sadece Gün.Ay Saat:Dakika olarak al (YYYY-MM-DD HH:MM:SS -> kesiyoruz)
                     String fullDate = lastMsg.getCreatedAt().toString();
                     if (fullDate.length() > 16)
                         lastDate = fullDate.substring(5, 16);
                 }
 
-                // Listeye ekle: "Konu Başlığı (01-01 14:30)"
                 chatTopicsList.getItems().add(subject + " (" + lastDate + ")");
             }
         }
     }
 
+    /**
+     * Loads the conversation history for the selected topic.
+     *
+     * @param selection The string selected from the topics list.
+     */
     private void loadChatMessages(String selection) {
         if (selection == null)
             return;
 
-        // Seçilen satırdan tarihi temizle "Konu (Tarih)" -> "Konu"
+        // Clean the date from the selection string
         String subject = selection;
         if (selection.contains(" (")) {
             subject = selection.substring(0, selection.lastIndexOf(" ("));
         }
 
         chatCurrentTopicLabel.setText(subject);
-        currentChatSubject = subject; // Yeni mesaj atarken kullanılacak konu
+        currentChatSubject = subject; 
 
         chatMessagesBox.getChildren().clear();
         int ownerId = UserDAO.getOwnerId();
@@ -554,7 +623,7 @@ public class CustomerController {
             }
         }
 
-        // Scroll'u en aşağı kaydır (biraz gecikmeli ki layout otursun)
+        // Scroll to bottom
         new java.util.Timer().schedule(new java.util.TimerTask() {
             @Override
             public void run() {
@@ -563,6 +632,9 @@ public class CustomerController {
         }, 100);
     }
 
+    /**
+     * Sends a message to the store manager under the current subject.
+     */
     @FXML
     private void sendMessage() {
         String txt = chatInput.getText().trim();
@@ -570,7 +642,6 @@ public class CustomerController {
             return;
         int ownerId = UserDAO.getOwnerId();
 
-        // Mesajı seçili konu başlığı (Subject) ile gönderiyoruz
         if (MessageDAO.sendMessage(currentUser.getId(), ownerId, currentChatSubject, txt)) {
             addMessageBubble(txt, true);
             chatInput.clear();
@@ -578,40 +649,43 @@ public class CustomerController {
         }
     }
 
+    /**
+     * Creates a styled speech bubble for a chat message.
+     *
+     * @param text The message content.
+     * @param isMe True if the current user sent the message, false if received.
+     */
     private void addMessageBubble(String text, boolean isMe) {
         Label lbl = new Label(text);
         lbl.setWrapText(true);
-        lbl.setMaxWidth(350); // Genişlik arttırıldı
+        lbl.setMaxWidth(350);
         lbl.setPadding(new Insets(10, 15, 10, 15));
         
-        // Font ayarı
         lbl.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 13px;");
 
         HBox box = new HBox();
         
         if (isMe) {
-            // BENİM MESAJIM (SAĞ) - Açık Yeşil (#dcf8c6)
+            // My Message (Right, Green)
             lbl.setStyle("-fx-background-color: #dcf8c6; " +
-                         "-fx-background-radius: 15 15 0 15; " + // Sağ alt köşe sivri
+                         "-fx-background-radius: 15 15 0 15; " + 
                          "-fx-text-fill: black; " +
                          "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1);");
             box.setAlignment(Pos.CENTER_RIGHT);
             box.getChildren().add(lbl);
         } else {
-            // KARŞI TARAFIN MESAJI (SOL) - Beyaz (#ffffff)
+            // Other Message (Left, White)
             lbl.setStyle("-fx-background-color: #ffffff; " +
-                         "-fx-background-radius: 15 15 15 0; " + // Sol alt köşe sivri
+                         "-fx-background-radius: 15 15 15 0; " + 
                          "-fx-text-fill: black; " +
                          "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1);");
             box.setAlignment(Pos.CENTER_LEFT);
             box.getChildren().add(lbl);
         }
         
-        // Balonlar arasına biraz boşluk bırak
         box.setPadding(new Insets(0, 0, 5, 0));
         chatMessagesBox.getChildren().add(box);
         
-        // Otomatik aşağı kaydır
         new java.util.Timer().schedule(new java.util.TimerTask() {
             @Override public void run() { 
                 javafx.application.Platform.runLater(() -> chatScroll.setVvalue(1.0)); 
@@ -619,12 +693,13 @@ public class CustomerController {
         }, 100);
     }
 
+    /**
+     * Opens a dialog to create a new support ticket based on one of the user's orders.
+     */
     @FXML
     private void handleNewTicket() {
-        // 1. Kullanıcının Siparişlerini Çek
         List<Order> myOrders = OrderDAO.getOrdersByUserId(currentUser.getId());
         
-        // 2. Seçenek Listesi (Genel Destek ARTIK YOK)
         java.util.List<String> choices = new java.util.ArrayList<>();
         
         if (myOrders.isEmpty()) {
@@ -636,7 +711,6 @@ public class CustomerController {
             choices.add("Sipariş #" + o.getId() + " (" + o.getOrderTime().toString().substring(0, 10) + ")");
         }
 
-        // 3. Seçim Diyaloğu
         ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
         dialog.setTitle("Yeni Destek Talebi");
         dialog.setHeaderText("Hangi siparişinizle ilgili sorun yaşıyorsunuz?");
@@ -646,14 +720,11 @@ public class CustomerController {
             if (!selectedSubject.trim().isEmpty()) {
                 currentChatSubject = selectedSubject;
                 
-                // Listeyi yenile
                 refreshChatTopics();
                 
-                // Eğer konu listede yoksa ekle (Tarihsiz olarak ekle, refresh düzeltecek)
                 String listItem = selectedSubject; 
                 boolean exists = false;
                 
-                // Listede var mı kontrol et (Tarihli formatla eşleşiyor mu?)
                 for(String s : chatTopicsList.getItems()) {
                     if(s.startsWith(selectedSubject)) {
                         chatTopicsList.getSelectionModel().select(s);
@@ -669,17 +740,19 @@ public class CustomerController {
                 
                 chatMessagesBox.getChildren().clear(); 
                 chatCurrentTopicLabel.setText(currentChatSubject);
-                // Chat penceresini aç
                 openOverlay(chatOverlay);
             }
         });
     }
 
+    /**
+     * Deletes the currently selected chat conversation.
+     * Prevents deletion of the "Genel Destek" topic.
+     */
     @FXML
     private void handleDeleteChat() {
         if (currentChatSubject == null || currentChatSubject.isEmpty()) return;
 
-        // Genel Destek sohbeti silinemez
         if ("Genel Destek".equals(currentChatSubject)) {
             showAlert("Bilgi", "Genel Destek sohbeti silinemez. Bu, genel sorularınız için ayrılmıştır.");
             return;
@@ -694,10 +767,9 @@ public class CustomerController {
             boolean success = MessageDAO.deleteChatTopic(currentUser.getId(), currentChatSubject);
             if (success) {
                 chatMessagesBox.getChildren().clear();
-                refreshChatTopics(); // Listeden kaldırır
+                refreshChatTopics(); 
                 showAlert("Başarılı", "Sohbet geçmişi silindi.");
                 
-                // Eğer liste boş kaldıysa Genel Destek ekle
                 if (chatTopicsList.getItems().isEmpty()) {
                     chatTopicsList.getItems().add("Genel Destek");
                     chatTopicsList.getSelectionModel().selectFirst();
@@ -710,15 +782,20 @@ public class CustomerController {
         }
     }
 
-    // --- DİĞER FONKSİYONLAR ---
+    // --- UTILITIES AND NAVIGATION ---
+
     @FXML
     private void handleEditProfile() {
         editAddressField.setText(currentUser.getAddress());
         editEmailField.setText(currentUser.getEmail());
         editPhoneField.setText(currentUser.getPhoneNumber());
+        editPasswordField.setText(currentUser.getPassword());
         openOverlay(profileOverlay);
     }
 
+    /**
+     * Saves the updated user profile information to the database.
+     */
     @FXML
     private void saveProfile() {
         if (UserDAO.updateUserProfile(currentUser.getId(), editAddressField.getText(), editEmailField.getText(),
@@ -730,13 +807,22 @@ public class CustomerController {
             showAlert("Hata", "Güncelleme başarısız.");
     }
 
+    /**
+     * Checks if an order can still be canceled (within 1 hour of placement).
+     * @param order The order to check.
+     * @return true if cancelable, false otherwise.
+     */
     private boolean canCancelOrder(Order order) {
         if (order.getOrderTime() == null) return false;
         LocalDateTime orderTime = order.getOrderTime().toLocalDateTime();
         LocalDateTime now = LocalDateTime.now();
-        return orderTime.isAfter(now.minusHours(1)); // 1 saat içinde
+        return orderTime.isAfter(now.minusHours(1)); 
     }
 
+    /**
+     * Cancels an order if eligible, restoring stock to the inventory.
+     * @param order The order to cancel.
+     */
     private void handleCancelOrder(Order order) {
         if (!canCancelOrder(order)) {
             showAlert("Hata", "Sipariş artık iptal edilemez (1 saat geçti).");
@@ -749,13 +835,17 @@ public class CustomerController {
         if (alert.showAndWait().get() == ButtonType.OK) {
             if (OrderDAO.cancelOrder(order.getId())) {
                 showAlert("Başarılı", "Sipariş iptal edildi.");
-                handleViewOrders(); // Listeyi yenile
+                handleViewOrders(); 
             } else {
                 showAlert("Hata", "İptal başarısız.");
             }
         }
     }
 
+    /**
+     * Prompts the user to rate the carrier of a completed order.
+     * @param order The order being rated.
+     */
     private void handleRateOrder(Order order) {
         List<String> ratings = List.of("1", "2", "3", "4", "5");
         ChoiceDialog<String> dialog = new ChoiceDialog<>("5", ratings);
@@ -785,6 +875,9 @@ public class CustomerController {
         displayProducts(allProducts);
     }
 
+    /**
+     * Opens the Shopping Cart window.
+     */
     @FXML
     private void handleViewCart() {
         try {
@@ -799,23 +892,23 @@ public class CustomerController {
         }
     }
 
+    /**
+     * Logs the user out and returns to the login screen.
+     */
     @FXML
     private void handleLogout() {
         try {
-            // Mevcut pencereyi al
             Stage stage = (Stage) usernameLabel.getScene().getWindow();
             
-            // Login sayfasını yükle
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
             
-            // Login sahnesini 1280x800 boyutuyla oluştur
             Scene scene = new Scene(root, 1200, 900);
             
             stage.setScene(scene);
-            stage.setMaximized(false); // Login ekranı pencere modunda olsun (ama büyük)
+            stage.setMaximized(false); 
             stage.setWidth(1200);
             stage.setHeight(900);
-            stage.centerOnScreen(); // Ortala
+            stage.centerOnScreen(); 
             stage.show();
         } catch (Exception e) {
             e.printStackTrace();
