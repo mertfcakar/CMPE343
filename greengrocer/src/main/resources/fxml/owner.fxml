@@ -34,21 +34,6 @@
                         <ScrollPane fitToWidth="true" fitToHeight="true">
                             <VBox spacing="20" style="-fx-padding: 20;">
                                 
-                                <!-- Recent Orders - EN ÜSTTE -->
-                                <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
-                                    <Label text="📋 Recent Orders" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-                                    <Separator/>
-                                    <TableView fx:id="recentOrdersTable" prefHeight="200">
-                                        <columns>
-                                            <TableColumn text="Order ID" prefWidth="80"/>
-                                            <TableColumn text="Customer" prefWidth="150"/>
-                                            <TableColumn text="Total" prefWidth="100"/>
-                                            <TableColumn text="Status" prefWidth="120"/>
-                                            <TableColumn text="Date" prefWidth="150"/>
-                                        </columns>
-                                    </TableView>
-                                </VBox>
-                                
                                 <!-- KPI Cards - Modern Design -->
                                 <HBox spacing="15">
                                     <VBox spacing="5" style="-fx-background-color: linear-gradient(to bottom, #2196f3, #1976d2); -fx-padding: 20; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);" HBox.hgrow="ALWAYS">

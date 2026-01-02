@@ -223,7 +223,15 @@ public class CustomerController {
                 + (p.getStock() <= 0 ? "#c62828" : (p.getStock() <= p.getThreshold() ? "#f57c00" : "#4caf50"))
                 + "; -fx-text-fill: white; -fx-padding: 3 8; -fx-background-radius: 5; -fx-font-size: 10px; -fx-font-weight: bold;");
 
-        Label nameLbl = new Label(p.getName());
+                // Stock miktarı göster
+                Label stockAmountLbl = new Label();
+                if (p.getStock() <= p.getThreshold()) {
+                    stockAmountLbl.setText(String.format("Stok: %.1f kg", p.getStock()));
+                    stockAmountLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " 
+                    + (p.getStock() <= 0 ? "#c62828" : "#f57c00") + "; -fx-font-weight: bold;");
+                }
+
+                Label nameLbl = new Label(p.getName());
         nameLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333;");
         Label priceLbl = new Label(String.format("%.2f TL / kg", p.getCurrentPrice()));
         priceLbl.setStyle("-fx-text-fill: #2e7d32; -fx-font-weight: bold; -fx-font-size: 14px;");
@@ -259,7 +267,14 @@ public class CustomerController {
 
         HBox actions = new HBox(10, spinner, addBtn);
         actions.setAlignment(Pos.CENTER);
-        card.getChildren().addAll(stockLbl, imgView, nameLbl, priceLbl, new Separator(), actions);
+        card.getChildren().addAll(stockLbl, imgView, nameLbl, priceLbl);
+        
+        // Stock miktarı varsa ekle
+        if (!stockAmountLbl.getText().isEmpty()) {
+            card.getChildren().add(stockAmountLbl);
+        }
+        
+        card.getChildren().addAll(new Separator(), actions);
         return card;
     }
 
